@@ -1,0 +1,75 @@
+==============================================================================
+ MiniMax-H3 单卡初赛算子运行与性能汇总
+==============================================================================
+ host       : f11r1n01
+ torch      : 2.5.1
+ hip        : 6.3.25405
+ device     : BW
+
+运行入口:
+  srun --gres=dcu:1 bash scripts/run_operator_demo.sh
+结果目录:
+  results/*.json  results/screenshots/*.png
+
+实际主链:
+  Qwen条件 -> 首帧VAE编码 -> packed DiT x49 -> VAE解码 -> MP4
+@@PAGE:02 DiT 热点算子
+==============================================================================
+ [正向提升] DiT 正式路径
+==============================================================================
+ AdaLN       seq=8192   2.1619 -> 1.6414 ms  1.317x  cos=0.99999726
+ GatedRes    seq=8192   1.3707 -> 0.8560 ms  1.601x  cos=0.99999726
+ AdaLN       seq=32768  8.5809 -> 6.4996 ms  1.320x  cos=0.99999720
+ GatedRes    seq=32768  5.4454 -> 3.3744 ms  1.614x  cos=0.99999738
+ MHA         seq=1024   dense 1.1528 -> SDPA 0.3090 ms  3.730x  cos=0.99998039
+ MHA         seq=4096   dense 21.8518 -> SDPA 2.7977 ms  7.811x  cos=0.99997997
+
+[正确性通过，但不单独宣称速度提升]
+ Q/K RMSNorm seq=4096   0.7718 ms cos=0.99999994
+ Q/K RMSNorm seq=16384  3.0700 ms cos=1.00000024
+ MRoPE       seq=4096   0.7797 ms cos=1.00000000 max_abs=0.0e+00
+ MRoPE       seq=16384  3.0773 ms cos=1.00000000 max_abs=0.0e+00
+ MRoPE       seq=39216  7.3468 ms cos=1.00000000 max_abs=0.0e+00
+
+[长序列 MHA 显存]
+ seq=8192   time=10.001 ms peak=0.549 GiB
+ seq=39216  time=216.578 ms peak=2.626 GiB
+@@PAGE:03 音频算子与接口补齐
+==============================================================================
+ [正向提升] NineToothed SnakeBeta
+==============================================================================
+ JIT L=207     0.0756 -> 0.0489 ms  1.547x  cos=1.00000000
+ JIT L=2048    0.0761 -> 0.0544 ms  1.398x  cos=1.00000000
+ JIT L=16384   0.1198 -> 0.0498 ms  2.404x  cos=0.99999994
+ JIT L=331200  2.0219 -> 0.8601 ms  2.351x  cos=0.99999988
+ AOT L=16384   0.1192 -> 0.1063 ms  1.121x  cos=1.00000000
+ AOT L=331200  2.0174 -> 1.0054 ms  2.007x  cos=0.99999988
+ WeightNorm  0.1506 -> 0.1136 ms  1.326x  modules=2
+
+[接口补齐正确，但当前比 PyTorch 慢，禁止标成性能优化]
+ GroupNorm shape=[2, 64, 31, 33] ratio=0.808x cos=0.99999994
+ GroupNorm shape=[1, 128, 256, 256] ratio=0.874x cos=0.99999994
+ conv1d             ratio=0.975x cos=0.99999994
+ conv1d             ratio=0.807x cos=1.00000000
+ conv_transpose1d   ratio=0.998x cos=1.00000000
+ conv_transpose1d   ratio=0.756x cos=1.00000000
+ snake_beta         ratio=0.880x cos=1.00000000
+@@PAGE:04 测试、规格与结论
+==============================================================================
+ [官方测试]
+ GroupNorm 18/18 | Conv1d 12/12 | ConvTranspose1d 12/12 | SnakeBeta 9/9
+
+[媒体输出契约]
+ frames=124 channels=3 audio_ch=2 rate=32000
+ encoder=libx264 yuv420p 24fps
+ negative case: Generated video has 123 frames, expected 124
+
+[结论]
+ 可明确宣称有性能提升的算子：
+   AdaLN、GatedResidual、MHA、SnakeBeta JIT/AOT、weight-norm
+ 仅通过正确性，不宣称速度提升：
+   Q/K RMSNorm、mRoPE
+ 仅补齐接口，当前实测更慢：
+   GroupNorm、Conv1d、ConvTranspose1d、SnakeBeta ATen 桥
+ 无法在当前单卡阶段验证：
+   完整 FL2VA、参考视频规格、端到端耗时、SSIM

@@ -1,0 +1,140 @@
+{
+  "timestamp": "2026-10-28T01:19:47",
+  "device": "cuda",
+  "dtype": "bf16",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "peak_bandwidth_gbs": 1339.4,
+  "shapes": {
+    "hidden": 5376,
+    "heads": 56,
+    "head_dim": 128,
+    "ffn": 14336,
+    "rope_dim": 16,
+    "rope_theta": 10000.0,
+    "seq_lens": [
+      2048,
+      8192,
+      32768
+    ],
+    "estimated_tokens_720p_124f": 111600
+  },
+  "results": [
+    {
+      "op": "rms_norm",
+      "seq": 2048,
+      "dtype": "bfloat16",
+      "torch_ms": 0.2803,
+      "infinicore_ms": 0.11,
+      "speedup_ic_over_torch": 2.548,
+      "tokens_per_s": 18612396.6,
+      "accuracy": {
+        "max_abs": 0.0625,
+        "max_rel": 0.01418,
+        "mean_abs": 0.001241,
+        "cosine": 1.0
+      }
+    },
+    {
+      "op": "silu_and_mul",
+      "seq": 2048,
+      "dtype": "bfloat16",
+      "torch_ms": 0.6,
+      "infinicore_ms": 0.4149,
+      "speedup_ic_over_torch": 1.446,
+      "tokens_per_s": 4935602.2,
+      "accuracy": {
+        "max_abs": 0.0625,
+        "max_rel": 0.007812,
+        "mean_abs": 0.000476,
+        "cosine": 1.0
+      }
+    },
+    {
+      "op": "linear",
+      "seq": 2048,
+      "dtype": "bfloat16",
+      "torch_ms": 1.099,
+      "infinicore_ms": 1.0135,
+      "speedup_ic_over_torch": 1.084,
+      "tokens_per_s": 2020771.2,
+      "accuracy": {
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_abs": 0.0,
+        "cosine": 1.0
+      }
+    },
+    {
+      "op": "rms_norm",
+      "seq": 8192,
+      "dtype": "bfloat16",
+      "torch_ms": 0.9999,
+      "infinicore_ms": 0.4191,
+      "speedup_ic_over_torch": 2.386,
+      "tokens_per_s": 19548634.9,
+      "accuracy": {
+        "max_abs": 0.0625,
+        "max_rel": 0.01418,
+        "mean_abs": 0.001216,
+        "cosine": 1.0
+      }
+    },
+    {
+      "op": "silu_and_mul",
+      "seq": 8192,
+      "dtype": "bfloat16",
+      "torch_ms": 2.3482,
+      "infinicore_ms": 1.5014,
+      "speedup_ic_over_torch": 1.564,
+      "tokens_per_s": 5456196.0,
+      "accuracy": {
+        "max_abs": 0.0625,
+        "max_rel": 0.007812,
+        "mean_abs": 0.0004761,
+        "cosine": 1.0
+      }
+    },
+    {
+      "op": "linear",
+      "seq": 8192,
+      "dtype": "bfloat16",
+      "torch_ms": 4.2105,
+      "infinicore_ms": 3.8774,
+      "speedup_ic_over_torch": 1.086,
+      "tokens_per_s": 2112757.9,
+      "accuracy": {
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mean_abs": 0.0,
+        "cosine": 1.0
+      }
+    }
+  ],
+  "errors": [
+    {
+      "op": "add_rms_norm",
+      "seq": 2048,
+      "error": "module 'infinicore.nn.functional' has no attribute 'add_rms_norm'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 231, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 74, in run_case\n    ic_fn()\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 128, in ic_fn\n    icf.add_rms_norm(ica, icb, icw, 1e-5, out=(ico, icr))\nAttributeError: module 'infinicore.nn.functional' has no attribute 'add_rms_norm'\n"
+    },
+    {
+      "op": "attention",
+      "seq": 2048,
+      "error": "'module' object is not callable",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 231, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 74, in run_case\n    ic_fn()\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 181, in ic_fn\n    ic_mha(icq, ick, icv, None, scale, False, out=ico)\nTypeError: 'module' object is not callable\n"
+    },
+    {
+      "op": "add_rms_norm",
+      "seq": 8192,
+      "error": "module 'infinicore.nn.functional' has no attribute 'add_rms_norm'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 231, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 74, in run_case\n    ic_fn()\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 128, in ic_fn\n    icf.add_rms_norm(ica, icb, icw, 1e-5, out=(ico, icr))\nAttributeError: module 'infinicore.nn.functional' has no attribute 'add_rms_norm'\n"
+    },
+    {
+      "op": "attention",
+      "seq": 8192,
+      "error": "'module' object is not callable",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 231, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 74, in run_case\n    ic_fn()\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 181, in ic_fn\n    ic_mha(icq, ick, icv, None, scale, False, out=ico)\nTypeError: 'module' object is not callable\n"
+    }
+  ]
+}

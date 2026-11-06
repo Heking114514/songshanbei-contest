@@ -1,0 +1,618 @@
+{
+  "backend": "triton",
+  "cache_key": "7d6434583d8fcbe5be13fa400dd4c395e66503c14e540b38c60006742d01a45a",
+  "entrypoint": "launch_snake_beta_h3_warpsize",
+  "kernel_name": "snake_beta_h3_warpsize",
+  "launch_abi": {
+    "kernel_args": [
+      {
+        "access": "read",
+        "dim": null,
+        "kind": "tensor",
+        "name": "x",
+        "source": "x",
+        "value": null
+      },
+      {
+        "access": "read",
+        "dim": null,
+        "kind": "tensor",
+        "name": "alpha_exp",
+        "source": "alpha_exp",
+        "value": null
+      },
+      {
+        "access": "read",
+        "dim": null,
+        "kind": "tensor",
+        "name": "beta_exp",
+        "source": "beta_exp",
+        "value": null
+      },
+      {
+        "access": "write",
+        "dim": null,
+        "kind": "tensor",
+        "name": "output",
+        "source": "output",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_0_size_0",
+        "source": "x",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": null,
+        "kind": "meta",
+        "name": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+        "source": "ninetoothed_BLOCK_SIZE_0",
+        "value": 1
+      },
+      {
+        "access": null,
+        "dim": 1,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_0_size_1",
+        "source": "x",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_0_stride_0",
+        "source": "x",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 1,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_0_stride_1",
+        "source": "x",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_1_size_0",
+        "source": "alpha_exp",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_1_stride_0",
+        "source": "alpha_exp",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_2_size_0",
+        "source": "beta_exp",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_2_stride_0",
+        "source": "beta_exp",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_3_size_0",
+        "source": "output",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 1,
+        "kind": "shape",
+        "name": "ninetoothed_ninetoothed_tensor_3_size_1",
+        "source": "output",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 0,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_3_stride_0",
+        "source": "output",
+        "value": null
+      },
+      {
+        "access": null,
+        "dim": 1,
+        "kind": "stride",
+        "name": "ninetoothed_ninetoothed_tensor_3_stride_1",
+        "source": "output",
+        "value": null
+      }
+    ],
+    "outputs": [
+      "output"
+    ],
+    "public_args": [
+      "x",
+      "alpha_exp",
+      "beta_exp",
+      "output"
+    ],
+    "shape_params": [
+      "ninetoothed_ninetoothed_tensor_0_size_0",
+      "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+      "ninetoothed_ninetoothed_tensor_0_size_1",
+      "ninetoothed_ninetoothed_tensor_0_stride_0",
+      "ninetoothed_ninetoothed_tensor_0_stride_1",
+      "ninetoothed_ninetoothed_tensor_1_size_0",
+      "ninetoothed_ninetoothed_tensor_1_stride_0",
+      "ninetoothed_ninetoothed_tensor_2_size_0",
+      "ninetoothed_ninetoothed_tensor_2_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_size_0",
+      "ninetoothed_ninetoothed_tensor_3_size_1",
+      "ninetoothed_ninetoothed_tensor_3_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_stride_1"
+    ]
+  },
+  "launch_plan": {
+    "abi": {
+      "kernel_args": [
+        {
+          "access": "read",
+          "dim": null,
+          "kind": "tensor",
+          "name": "x",
+          "source": "x",
+          "value": null
+        },
+        {
+          "access": "read",
+          "dim": null,
+          "kind": "tensor",
+          "name": "alpha_exp",
+          "source": "alpha_exp",
+          "value": null
+        },
+        {
+          "access": "read",
+          "dim": null,
+          "kind": "tensor",
+          "name": "beta_exp",
+          "source": "beta_exp",
+          "value": null
+        },
+        {
+          "access": "write",
+          "dim": null,
+          "kind": "tensor",
+          "name": "output",
+          "source": "output",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_0_size_0",
+          "source": "x",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": null,
+          "kind": "meta",
+          "name": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+          "source": "ninetoothed_BLOCK_SIZE_0",
+          "value": 1
+        },
+        {
+          "access": null,
+          "dim": 1,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_0_size_1",
+          "source": "x",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_0_stride_0",
+          "source": "x",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 1,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_0_stride_1",
+          "source": "x",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_1_size_0",
+          "source": "alpha_exp",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_1_stride_0",
+          "source": "alpha_exp",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_2_size_0",
+          "source": "beta_exp",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_2_stride_0",
+          "source": "beta_exp",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_3_size_0",
+          "source": "output",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 1,
+          "kind": "shape",
+          "name": "ninetoothed_ninetoothed_tensor_3_size_1",
+          "source": "output",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 0,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_3_stride_0",
+          "source": "output",
+          "value": null
+        },
+        {
+          "access": null,
+          "dim": 1,
+          "kind": "stride",
+          "name": "ninetoothed_ninetoothed_tensor_3_stride_1",
+          "source": "output",
+          "value": null
+        }
+      ],
+      "outputs": [
+        "output"
+      ],
+      "public_args": [
+        "x",
+        "alpha_exp",
+        "beta_exp",
+        "output"
+      ],
+      "shape_params": [
+        "ninetoothed_ninetoothed_tensor_0_size_0",
+        "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+        "ninetoothed_ninetoothed_tensor_0_size_1",
+        "ninetoothed_ninetoothed_tensor_0_stride_0",
+        "ninetoothed_ninetoothed_tensor_0_stride_1",
+        "ninetoothed_ninetoothed_tensor_1_size_0",
+        "ninetoothed_ninetoothed_tensor_1_stride_0",
+        "ninetoothed_ninetoothed_tensor_2_size_0",
+        "ninetoothed_ninetoothed_tensor_2_stride_0",
+        "ninetoothed_ninetoothed_tensor_3_size_0",
+        "ninetoothed_ninetoothed_tensor_3_size_1",
+        "ninetoothed_ninetoothed_tensor_3_stride_0",
+        "ninetoothed_ninetoothed_tensor_3_stride_1"
+      ]
+    },
+    "block": [
+      {
+        "op": "constant",
+        "operands": [],
+        "value": 128
+      }
+    ],
+    "dynamic_parameters": [
+      "ninetoothed_ninetoothed_tensor_0_size_0",
+      "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+      "ninetoothed_ninetoothed_tensor_0_size_1",
+      "ninetoothed_ninetoothed_tensor_0_stride_0",
+      "ninetoothed_ninetoothed_tensor_0_stride_1",
+      "ninetoothed_ninetoothed_tensor_1_size_0",
+      "ninetoothed_ninetoothed_tensor_1_stride_0",
+      "ninetoothed_ninetoothed_tensor_2_size_0",
+      "ninetoothed_ninetoothed_tensor_2_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_size_0",
+      "ninetoothed_ninetoothed_tensor_3_size_1",
+      "ninetoothed_ninetoothed_tensor_3_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_stride_1"
+    ],
+    "grid": [
+      {
+        "op": "mul",
+        "operands": [
+          {
+            "op": "mul",
+            "operands": [
+              {
+                "op": "add",
+                "operands": [
+                  {
+                    "op": "floordiv",
+                    "operands": [
+                      {
+                        "op": "sub",
+                        "operands": [
+                          {
+                            "op": "add",
+                            "operands": [
+                              {
+                                "op": "sub",
+                                "operands": [
+                                  {
+                                    "op": "sub",
+                                    "operands": [
+                                      {
+                                        "op": "symbol",
+                                        "operands": [],
+                                        "value": "ninetoothed_ninetoothed_tensor_3_size_0"
+                                      },
+                                      {
+                                        "op": "sub",
+                                        "operands": [
+                                          {
+                                            "op": "symbol",
+                                            "operands": [],
+                                            "value": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0"
+                                          },
+                                          {
+                                            "op": "constant",
+                                            "operands": [],
+                                            "value": 1
+                                          }
+                                        ],
+                                        "value": null
+                                      }
+                                    ],
+                                    "value": null
+                                  },
+                                  {
+                                    "op": "constant",
+                                    "operands": [],
+                                    "value": 1
+                                  }
+                                ],
+                                "value": null
+                              },
+                              {
+                                "op": "symbol",
+                                "operands": [],
+                                "value": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0"
+                              }
+                            ],
+                            "value": null
+                          },
+                          {
+                            "op": "constant",
+                            "operands": [],
+                            "value": 1
+                          }
+                        ],
+                        "value": null
+                      },
+                      {
+                        "op": "symbol",
+                        "operands": [],
+                        "value": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0"
+                      }
+                    ],
+                    "value": null
+                  },
+                  {
+                    "op": "constant",
+                    "operands": [],
+                    "value": 1
+                  }
+                ],
+                "value": null
+              },
+              {
+                "op": "add",
+                "operands": [
+                  {
+                    "op": "floordiv",
+                    "operands": [
+                      {
+                        "op": "sub",
+                        "operands": [
+                          {
+                            "op": "add",
+                            "operands": [
+                              {
+                                "op": "sub",
+                                "operands": [
+                                  {
+                                    "op": "sub",
+                                    "operands": [
+                                      {
+                                        "op": "symbol",
+                                        "operands": [],
+                                        "value": "ninetoothed_ninetoothed_tensor_3_size_1"
+                                      },
+                                      {
+                                        "op": "constant",
+                                        "operands": [],
+                                        "value": 511
+                                      }
+                                    ],
+                                    "value": null
+                                  },
+                                  {
+                                    "op": "constant",
+                                    "operands": [],
+                                    "value": 1
+                                  }
+                                ],
+                                "value": null
+                              },
+                              {
+                                "op": "constant",
+                                "operands": [],
+                                "value": 512
+                              }
+                            ],
+                            "value": null
+                          },
+                          {
+                            "op": "constant",
+                            "operands": [],
+                            "value": 1
+                          }
+                        ],
+                        "value": null
+                      },
+                      {
+                        "op": "constant",
+                        "operands": [],
+                        "value": 512
+                      }
+                    ],
+                    "value": null
+                  },
+                  {
+                    "op": "constant",
+                    "operands": [],
+                    "value": 1
+                  }
+                ],
+                "value": null
+              }
+            ],
+            "value": null
+          },
+          {
+            "op": "mul",
+            "operands": [
+              {
+                "op": "symbol",
+                "operands": [],
+                "value": "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0"
+              },
+              {
+                "op": "constant",
+                "operands": [],
+                "value": 512
+              }
+            ],
+            "value": null
+          }
+        ],
+        "value": null
+      }
+    ],
+    "specialization_key": [
+      "ninetoothed_ninetoothed_tensor_0_size_0",
+      "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0",
+      "ninetoothed_ninetoothed_tensor_0_size_1",
+      "ninetoothed_ninetoothed_tensor_0_stride_0",
+      "ninetoothed_ninetoothed_tensor_0_stride_1",
+      "ninetoothed_ninetoothed_tensor_1_size_0",
+      "ninetoothed_ninetoothed_tensor_1_stride_0",
+      "ninetoothed_ninetoothed_tensor_2_size_0",
+      "ninetoothed_ninetoothed_tensor_2_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_size_0",
+      "ninetoothed_ninetoothed_tensor_3_size_1",
+      "ninetoothed_ninetoothed_tensor_3_stride_0",
+      "ninetoothed_ninetoothed_tensor_3_stride_1"
+    ],
+    "tuning_candidates": [
+      {
+        "id": "ninetoothed_BLOCK_SIZE_0-1_warps-4_stages-1",
+        "meta_parameters": {
+          "ninetoothed_meta_prefix_ninetoothed_BLOCK_SIZE_0": 1
+        },
+        "num_stages": 1,
+        "num_warps": 4
+      }
+    ]
+  },
+  "library": "/public/home/xdzs2026_b0413/work/infinilm/kernels/aot_snake_beta/snake_beta_h3_warpsize.triton.so",
+  "pass_trace": [
+    "ssa.canonicalize",
+    "ssa.analyze_effects",
+    "ssa.select_schedule",
+    "ssa.triton.optimize_schedule",
+    "ssa.decompose_linalg",
+    "ssa.validate_target_capabilities"
+  ],
+  "schema": 3,
+  "source": "/public/home/xdzs2026_b0413/.ninetoothed/artifacts/7d6434583d8fcbe5be13fa400dd4c395e66503c14e540b38c60006742d01a45a/snake_beta_h3_warpsize.triton.py",
+  "target": {
+    "backend": "triton",
+    "compute_arch": "gfx936",
+    "device_types": [
+      "cuda"
+    ],
+    "platform": "generic",
+    "profile": {
+      "accelerator_name": null,
+      "accelerator_vendor": null,
+      "backend_modes": {
+        "cuda": [
+          "aot",
+          "jit"
+        ],
+        "tilelang": [
+          "aot",
+          "jit"
+        ],
+        "triton": [
+          "aot",
+          "jit"
+        ]
+      },
+      "backend_supported_capabilities": {},
+      "backend_unsupported_capabilities": {},
+      "compute_arch": null,
+      "constraints": {},
+      "device_types": [
+        "cuda"
+      ],
+      "metadata": {
+        "legacy_default": true
+      },
+      "name": "generic",
+      "supported_capabilities": [],
+      "unsupported_capabilities": []
+    }
+  },
+  "toolchain": {},
+  "triton_aot_launcher_schema": 2
+}

@@ -1,0 +1,432 @@
+# MiniMax-H3 远程算子优化实施与验证报告
+
+> 更新时间：2026-10-31
+
+> 远程入口：`xdzs2026_b0413@zzeshell.scnet.cn:65032`
+
+> 计算后端：Hygon BW（`gfx936`），单卡 64 GB
+
+## 1. 远程现状
+
+- 登录节点可直接访问，当前无遗留 Slurm 作业。
+- 远程源码位于：
+  - `~/Projects/InfiniCore`
+  - `~/Projects/InfiniLM`
+  - `~/work/infinilm`
+- `~/work/infinilm` 中已有 RMSNorm、Add-RMSNorm 和元素级效率探针的独立
+  NineToothed 实验。
+- 远程没有 MiniMax-H3 大权重；家目录内未发现大于 1 GB 的
+  `safetensors`。因此本轮无法在远程运行完整 FL2VA、生成参考视频或计算
+  最终 SSIM。单卡 64 GB 本身也不能容纳未切分的 33B DiT。
+- 之前“全仓库 modified”主要是 Windows 上传产生的 CRLF，不是实际逻辑改动。
+
+## 2. 实际执行顺序
+
+默认 FL2VA 不是文档早先写的 50 次 DiT，而是：
+
+```text
+输入/Resize
+  -> Qwen3-VL 文本与图像条件编码（1 次）
+  -> 首帧视频 VAE 编码
+  -> packed layout + 初始噪声
+  -> 49 × [DiT 联合前向 -> video scheduler step -> audio scheduler step]
+  -> 去掉条件行并 unpack
+  -> 视频 VAE decode（默认约 196 个 tile 调用）
+  -> 音频 VAE decode
+  -> MP4 封装
+```
+
+`scheduler.set_timesteps(50)` 产生 50 个 sigma 网格点，终点 sigma 不执行
+DiT，因此实际有 49 个 timestep。packed 物理顺序是：
+
+```text
+[text | keyframe rows | target audio rows | target video rows]
+```
+
+默认 124 帧、768×1344 时，每个 latent 视频帧对应 `(H/32)×(W/32)` 个
+token，总 packed 长度约 3.9 万，而不是文档早期估算的 11.16 万。
+
+每个 DiT block 的真实顺序：
+
+```text
+AdaLN projection -> token gather -> six slices
+-> RMSNorm1 -> (1 + scale_msa) * x + shift_msa
+-> fused QKV -> Q/K RMSNorm -> one MRoPE(q,k)
+-> non-causal self-attention -> output projection
+-> gated residual
+-> RMSNorm2 -> (1 + scale_mlp) * x + shift_mlp
+-> fused gate/up -> SwiGLU -> down
+-> gated residual
+```
+
+主 block 每层有 5 个高层 Linear、4 个 RMSNorm、1 个 MHA、1 个 MRoPE。
+token refiner 的 2 个 block 和 `context_embedder` 只依赖固定 prompt，不应在
+49 个去噪步内重复计算。
+
+## 3. 已实施优化
+
+### 3.1 AdaLN 与门控残差
+
+正式路径已从：
+
+```text
+scaled = x * scale
+y = (x + scaled) + shift
+```
+
+改为：
+
+```text
+y = addcmul(x, x, scale, 1.0)
+y = y + shift
+```
+
+门控残差也从 `mul + add` 改为单次 `addcmul`。每层每步减少 4 次 kernel
+launch 和一个中间张量。
+
+真实 `stride=6H` 的 bf16 消融结果：
+
+| seq | AdaLN 基线 / 优化 | AdaLN 加速 | 门控残差基线 / 优化 | 残差加速 |
+|---:|---:|---:|---:|---:|
+| 8192 | 2.162 / 1.636 ms | **1.321×** | 1.370 / 0.852 ms | **1.609×** |
+| 32768 | 8.582 / 6.500 ms | **1.320×** | 5.446 / 3.375 ms | **1.614×** |
+
+AdaLN 与旧实现 cosine 为 `0.9999972`；门控残差与旧实现 cosine 为
+`0.9999973`。门控残差与 fp32 参考完全一致（`max_abs=0`）；AdaLN 的
+`max_abs=0.125` 来自 BF16 舍入，但与旧实现的误差处于同一量级。
+
+### 3.2 Hygon 非因果 MHA
+
+原 Hygon 固定长度 MHA 显式执行：
+
+```text
+QK^T -> softmax -> AV
+```
+
+长序列会物化 `56 × S × S` 注意力矩阵。现已改为
+`at::scaled_dot_product_attention`，保持 `is_causal=false`，让 PyTorch 在
+Hygon 上选择融合 SDPA 后端。构建 guard 从仅 `ENABLE_FLASH_ATTN` 放宽为
+`ENABLE_ATEN`，因此没有可选 flash-attn ABI 时也可以注册该算子。
+
+同一进程内与旧显式 `QK^T -> softmax -> AV` 直接 A/B：
+
+| seq | 旧显式路径 | 新 SDPA | 加速 | cosine |
+|---:|---:|---:|---:|---:|
+| 1024 | 1.1528 ms | **0.3090 ms** | **3.730×** | 0.9999804 |
+| 4096 | 21.8518 ms | **2.7977 ms** | **7.811×** | 0.9999800 |
+
+全序列运行结果：
+
+| seq | MHA 耗时 | 峰值显存 |
+|---:|---:|---:|
+| 1024 | 0.298 ms | 0.069 GiB |
+| 4096 | 2.786 ms | 0.274 GiB |
+| 8192 | 10.001 ms | 0.549 GiB |
+| **39216（默认 packed 规模）** | **216.578 ms** | **2.626 GiB** |
+
+峰值显存随序列长度线性增长，而不是平方增长。`S=1024` 与 fp32 softmax
+参考的 cosine 为 `0.9999958`、`max_abs=0.00390625`。PyTorch
+`can_use_flash_attention=True`；该版本没有公开的 backend enum 查询接口，
+因此结论以“同进程 A/B 加速 + 融合 SDPA + 显存线性”作为运行证据，不声称
+具体 kernel 名称。
+
+### 3.3 RMSNorm 与 mRoPE launch 几何
+
+- RMSNorm：H3 的 Q/K norm 行宽为 `head_dim=128`，而旧实现按设备最大线程
+  数启动。现对 `dim<=128/256/512` 分别使用 128/256/512 线程，hidden=5376
+  继续走原有大行宽策略。
+- mRoPE：旧实现每行固定最多 256 线程；H3 实际只用 48 个 rotary 维和
+  32 个 pass-through 维。现按有效宽度向上对齐到 32 线程，H3 使用 64 线程，
+  公式和读写顺序不变。
+
+实测结果：
+
+| 算子/形状 | seq=4096 | seq=16384 | seq=39216 | 正确性 |
+|---|---:|---:|---:|---|
+| RMSNorm `[S,56,128]` | 0.772 ms | 3.070 ms | 未重复采样 | cosine `0.99999994 / 1.00000024` |
+| mRoPE H3 shape | 0.780 ms | 3.077 ms | **7.346 ms** | Q/K cosine `1.0`，`max_abs=0` |
+
+RMSNorm 从 4096 到 16384 为 `3.98×` 耗时，接近线性；mRoPE 从 4096 到
+39216 为 `9.42×`，对应 `9.57×` 序列增长。
+
+### 3.4 固定文本条件缓存
+
+`context_embedder + 2-layer token_refiner` 已加入 native 端缓存：
+- 同一个 prompt embedding storage 在 49 步内只计算一次；
+- Python 侧在新 prompt/新 generation 时显式重置 native cache；
+- 同时缓存每个 generation 不变的 RoPE cos/sin cache 和连续
+  `position_ids`，避免每步重新构造。
+
+### 3.5 VAE 精度保护
+
+原示例在 VAE 已由 `from_pretrained(dtype=...)` 正确加载后，又执行：
+
+```python
+pipe.vae.to(device=..., dtype=bfloat16)
+pipe.audio_vae.to(device=..., dtype=bfloat16)
+```
+
+`ModelMixin.to()` 不会自动保留 `_keep_in_fp32_modules`，这会把必须使用
+FP32 的音频 codec 和视频 encoder 下转。现已改为只迁移 device，并在加载后
+断言以下模块的参数仍为 FP32：
+
+- `vae.encoder`
+- `audio_vae.decoder`
+- `audio_vae.pre_block`
+- `audio_vae.dec_in_proj`
+
+### 3.6 生成媒体规格硬校验
+
+示例入口现在会在 MP4 编码前检查：
+
+- 视频形状必须为 `[frames, height, width, 3]`；
+- 帧数必须等于请求的 124 帧；
+- 高宽必须为非零且能被 32 整除；
+- 音频必须为双声道、32 kHz；
+- 音视频时长差不得超过 50 ms。
+
+有效样本通过、123 帧样本被明确拒绝。MP4 编码器本身固定为
+`libx264 + yuv420p + 24 fps`。
+
+### 3.7 GroupNorm 算子补齐
+
+InfiniCore 新增了标准 NCHW `group_norm` 高层接口、Python functional 入口和
+Hygon 后端注册。实现支持任意可整除的 group 数，并为 H3 video encoder 使用
+的 F32 affine GroupNorm 提供首版正确性基线。
+
+实测结果：
+
+| shape | InfiniCore | PyTorch 直调 | 相对速度 | 正确性 |
+|---|---:|---:|---:|---|
+| `[2,64,31,33]`, G=32 | 0.0456 ms | 0.0369 ms | 0.809× | cosine `0.99999994`，`max_abs=0` |
+| `[1,128,256,256]`, G=32 | 0.4329 ms | 0.3768 ms | 0.870× | cosine `0.99999994`，`max_abs=0` |
+
+官方测试框架另外覆盖了 affine/no-affine、strided 输入、非平方 shape 及
+FP16/BF16/FP32，结果为 **18/18 通过**。
+
+这证明接口与 Hygon 分发已接通，但当前桥接层比直接 PyTorch 慢
+13%–19%，因此**没有接入正式 VAE 路径**。它作为后续 native group-norm
+kernel 的兼容基线和 golden 对照，不把“有接口”误报成性能优化。
+
+### 3.8 音频 VAE 算子补齐
+
+新增三个音频 decoder 所需算子：
+
+- `conv1d`：支持 dense、grouped/depthwise、stride、padding 和 dilation；
+- `conv_transpose1d`：支持 dense、grouped/depthwise、stride、padding、
+  output_padding 和 dilation；
+- `snake_beta`：直接实现 BigVGAN 的
+  `x + sin(exp(alpha) * x)^2 / (exp(beta) + 1e-9)`。
+
+真实 H3 子形状结果：
+
+| 算子/形状 | InfiniCore | PyTorch 直调 | 相对速度 | 正确性 |
+|---|---:|---:|---:|---|
+| dilated Conv1d `[1,512,1035]` | 0.4020 ms | 0.4000 ms | 0.995× | cosine `0.99999994`，`max_abs=0` |
+| depthwise Conv1d `[1,64,16384]`, G=64 | 0.1845 ms | 0.1490 ms | 0.808× | cosine `1.0`，`max_abs=0` |
+| dense ConvTranspose1d `[1,1024,207]` | 0.4611 ms | 0.4498 ms | 0.975× | cosine `1.0`，`max_abs=0` |
+| depthwise ConvTranspose1d `[1,512,1035]`, G=512 | 0.1482 ms | 0.1106 ms | 0.746× | cosine `1.0`，`max_abs=0` |
+| SnakeBeta `[1,128,16384]` | 0.1469 ms | 0.1324 ms | 0.902× | cosine `1.0`，`max_abs=0` |
+
+官方测试框架结果：
+
+- Conv1d：`12/12` 通过，覆盖 grouped、dilation、stride/padding、
+  FP16/FP32 和 strided 输入；
+- ConvTranspose1d：`12/12` 通过，覆盖 grouped、stride/padding/
+  output_padding、FP16/FP32 和 strided 输入；
+- SnakeBeta：`9/9` 通过，覆盖多种长度和 FP16/BF16/FP32。
+
+### 3.9 NineToothed SnakeBeta 融合
+
+`snake_beta` 的 ATen 桥接会拆成多个 kernel。NineToothed 版本使用固定
+`1×512` tile 覆盖任意长度，把 `sine^2 / beta + x` 融合成一次 kernel，并在
+权重加载阶段预计算 `exp(alpha)`、`exp(beta)`，因为这两个值只依赖模型参数。
+
+FP32、4 warps、3 轮中位数：
+
+| shape `[B,C,L]` | PyTorch | NineToothed | 加速 |
+|---|---:|---:|---:|
+| `[1,128,207]` | 0.0756 ms | **0.0489 ms** | **1.547×** |
+| `[1,128,2048]` | 0.0761 ms | **0.0544 ms** | **1.398×** |
+| `[1,128,16384]` | 0.1198 ms | **0.0498 ms** | **2.404×** |
+| `[1,128,331200]` | 2.0219 ms | **0.8601 ms** | **2.351×** |
+
+所有长度 cosine ≥ `0.9999998`，`max_abs=0`。动态长度版本不再按每个音频
+长度重新生成 kernel。正式封装位于：
+
+```text
+src/infiniop/ops/snake_beta/ninetoothed/snake_beta.py
+```
+
+封装层额外验证了 `B=2`、`L=207/2048/331200`，均 `max_abs=0`。
+
+正式 VAE 接线通过
+`install_ninetoothed_audio_kernels(pipe.audio_vae)` 完成，只替换
+`MiniMaxH3AudioSnakeBeta.forward`，不改变 state dict。随机模块级集成测试：
+
+- `B=2, C=64, L=207/331200`：cosine `1.0`，`max_abs=1.907e-06`；
+- 安装幂等，checkpoint keys/values 不变；
+- 训练模式自动回退原始 PyTorch forward。
+
+参数侧指数在权重加载阶段缓存，最终激活热路径只保留 NineToothed 融合
+kernel。Conv1d/ConvTranspose1d 的 ATen 桥接仍慢于 PyTorch 直调，未替换
+正式 VAE 对应调用。
+
+### 3.10 Hygon AOT 产物
+
+AOT 链路已从“工具报错”推进到可执行产物：
+
+1. 修复 Triton `compile.py` 中三个参数重复使用 `-w` 的 argparse 冲突；
+2. 在无 GPU 的登录节点显式指定 `hip:gfx936:64` 目标；
+3. 支持 Triton 输出中的 `hsaco` 二进制；
+4. 修复 C/C++ launcher 的 `extern "C"` 链接名；
+5. 修正 Hygon warp size：launch 线程数必须用 `num_warps * 64`，不能写死
+   NVIDIA 的 `num_warps * 32`；
+6. 用 CUDA runtime + primary context 建立 Hygon 当前 context，并加入首次
+   初始化后的线程内快路径。
+
+生成产物：
+
+```text
+kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.so
+kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.manifest.json
+kernels/aot_snake_beta/built.pkl
+```
+
+AOT 运行结果：
+
+| length | PyTorch | AOT | 加速 | 正确性 |
+|---:|---:|---:|---:|---|
+| 16384 | 0.1192 ms | 0.1063 ms | 1.121× | cosine `1.0`，`max_abs=0` |
+| 331200 | 2.0174 ms | 1.0054 ms | **2.007×** | cosine `≥0.9999998`，`max_abs=0` |
+
+AOT 已满足“可生成、可加载、可执行、数值正确”；小长度仍略慢于动态 JIT，
+因此当前默认保留 JIT 快路径，同时提交 AOT 产物用于正式比赛审计。
+
+AOT 工具补丁保存在：
+
+```text
+third_party_patches/triton/compile.py
+third_party_patches/triton/compile.c
+third_party_patches/triton/compile.h
+third_party_patches/triton/link.py
+repos/ninetoothed/src/ninetoothed/backends/materializers/triton.py
+```
+
+### 3.11 Audio weight-norm 一次性物化
+
+音频 VAE 的 Conv1d/ConvTranspose1d 使用旧式 `weight_g`/`weight_v`
+weight-norm hook，每次 forward 都会重新计算有效权重。推理时已在模型加载后调用
+`materialize_audio_weight_norm(pipe.audio_vae)`，将派生权重固化一次并移除
+hook。
+
+随机模块级测试：
+
+- Conv1d 与 ConvTranspose1d 输出 cosine `≥1.0`，`max_abs=0`；
+- 2 个 weight-norm module 全部物化，剩余 `weight_g` 为 0；
+- Conv1d 同一形状最新耗时从 `0.1506 ms` 降到 `0.1136 ms`，加速
+  **1.326×**；重复运行范围约 `1.326×–1.418×`。
+
+该变换只物化 checkpoint 已有的等价派生权重，不训练、不量化、不改变公式。
+
+### 3.12 远程依赖兼容
+
+远程 `transformers 5.15.1` 会扫描遗留 TF/Flax 模型模块，但
+`BACKENDS_MAPPING` 中没有对应的可选 backend 键，导致 `import transformers`
+在模型加载前直接报错。已加入兼容回退：未知的可选 backend 被视为不可用，
+不再破坏整个包导入。补丁保留在：
+
+```text
+third_party_patches/transformers-5.15.1/import_utils.py
+third_party_patches/transformers-5.15.1/import_utils.py.orig
+```
+
+修复后在 DCU 节点验证：
+
+```text
+transformers 5.15.1
+infinilm import ok
+```
+
+同时确认重建后的 `_infinilm` 原生扩展可以正常加载。
+
+## 4. 验证结果
+
+所有验证均使用远程 Hygon BW（`gfx936`，设备名 `BW`）、Torch 2.5.1、
+HIP 6.3.25405。
+
+已完成构建后，一键运行全部算子验证：
+
+```bash
+srun --partition=hx1hdnormal --ntasks=1 --cpus-per-task=8 \
+  --gres=dcu:1 --mem=30G --time=00:20:00 \
+  bash -lc '"$HOME/work/infinilm/scripts/run_operator_demo.sh"' \
+  2>&1 | tee results/operator_demo_console.log
+```
+
+精简结论写入 `results/operator_summary.txt`，官方测试原始汇总写入
+`results/official_ops_tests.log`。
+
+| 项目 | 结果 |
+|---|---|
+| InfiniCore C++/Python 构建 | 通过 |
+| InfiniLM 原生扩展构建与导入 | 通过 |
+| AdaLN 真实 stride | 1.320–1.321×，cosine `0.9999972` |
+| 门控残差真实 stride | 1.609–1.614×，cosine `0.9999973` |
+| Q/K RMSNorm | cosine `0.99999994–1.00000024` |
+| mRoPE | Q/K cosine `1.0`，逐元素 `max_abs=0` |
+| MHA 正确性 | cosine `0.9999958`，`max_abs=0.00390625` |
+| MHA 同进程速度 A/B | 3.730×@1024，7.811×@4096 |
+| MHA 长序列显存 | 0.549 GiB@8192，2.626 GiB@39216，线性 |
+| GroupNorm API/正确性 | H3 tile 形状通过，`max_abs=0` |
+| GroupNorm 性能 | 直调 PyTorch 的 0.81–0.87×，暂未接入正式路径 |
+| Conv1d | H3 dilated/depthwise 正确性 `max_abs=0`，官方 `12/12` 通过 |
+| ConvTranspose1d | H3 dense/depthwise 正确性 `max_abs=0`，官方 `12/12` 通过 |
+| SnakeBeta | H3 音频 shape 正确性 `max_abs=0`，官方 `9/9` 通过 |
+| NineToothed SnakeBeta JIT | 动态长度 `1.398×–2.404×`，`max_abs=0` |
+| NineToothed SnakeBeta AOT | `1.121×–2.007×`，产物可加载且数值正确 |
+| SnakeBeta VAE hookup | `207/331200` 通过，state dict 不变，训练回退有效 |
+| Audio weight-norm 物化 | Conv1d 最新 `1.326×`，输出 `max_abs=0` |
+| 生成媒体契约校验 | 124 帧/32 对齐/RGB/双声道/32 kHz，通过 |
+| 视频 SSIM / 完整 FL2VA | 未测，远程无 135 GB 模型权重 |
+
+逐算子状态和正式接线情况见 `算子台账.md`。
+
+结构化结果文件：
+
+```text
+results/final_validation.json
+results/mha_baseline_compare.json
+results/group_norm_validation.json
+results/audio_ops_validation.json
+results/snake_beta_nt.json
+results/snake_beta_nt_dynamic.json
+results/aot_snake_beta_runtime.json
+results/audio_hook_check.json
+results/weight_norm_check.json
+results/media_contract_check.json
+```
+
+远程对应文件位于 `~/work/infinilm/results/`。
+
+## 5. 尚未完成的生产缺口
+
+1. 视频 VAE 和音频 VAE 仍在 PyTorch，未进入 InfiniCore 正式路径。
+2. `group_norm`、`conv1d`、`conv_transpose1d`、`snake_beta` 已有正确 API
+   基线，但 Hygon 桥接实现仍慢于 PyTorch 直调，尚未作为正式性能路径接入。
+3. Audio weight-norm 已完成一次性物化；LowPassFilter1d 和完整 VAE facade
+   仍待完成。NineToothed SnakeBeta 已完成动态 JIT、VAE forward hookup
+   和 Hygon AOT 产物验证。
+4. 未迁移 VAE 前，不能声称整条模型已完全原生。
+5. 按当前初赛资源说明，只有单卡且无法拉取 135 GB 模型权重，因此完整
+   FL2VA、端到端性能、视频规格与 SSIM 不在本阶段可执行范围内。
+
+这些缺口需要按“算子实现 + VAE facade 接线 + 固定 latent/层输出 golden +
+最终视频 SSIM”闭环推进，只新增孤立 kernel 不计完成。
+
+## 6. 卡时
+
+`2026-10-27` 至本轮结束，Slurm `ElapsedRaw` 累计约 **4.90 DCU 小时**，
+配额 100 小时，剩余约 **95.10 小时**。本次工作累计新增约 `0.83 DCU 小时`，
+其中大部分是首次按 ATen 配置完整重建 InfiniCore；完整算子 demo 单次运行
+包含全部 MHA/VAE/AOT/官方测试。

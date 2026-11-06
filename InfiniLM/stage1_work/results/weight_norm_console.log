@@ -1,0 +1,9 @@
+srun: job 1012814 queued and waiting for resources
+srun: job 1012814 has been allocated resources
+/public/software/sghpc_sdk/Linux_x86_64/25.6/das/conda/envs/vllm-25.04.2/lib/python3.10/site-packages/torch/nn/utils/weight_norm.py:143: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+  WeightNorm.apply(module, name, dim)
+conv1d cosine=1.00000012 max_abs=0.000e+00
+conv_transpose1d cosine=1.00000000 max_abs=0.000e+00
+materialized=2 before=0.1547ms after=0.1150ms speedup=1.345x
+remaining weight_g: 0
+[write] results/weight_norm_check.json

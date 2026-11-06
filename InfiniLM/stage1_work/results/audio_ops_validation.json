@@ -1,0 +1,174 @@
+{
+  "hostname": "f11r1n01",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "results": [
+    {
+      "case": "conv1d",
+      "input_shape": [
+        1,
+        512,
+        1035
+      ],
+      "weight_shape": [
+        512,
+        512,
+        7
+      ],
+      "stride": 1,
+      "padding": 9,
+      "dilation": 3,
+      "groups": 1,
+      "torch_ms": 0.3973443526774645,
+      "infinicore_ms": 0.407522392924875,
+      "speed_ratio": 0.9750245865647761,
+      "correctness": {
+        "cosine": 0.9999999403953552,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "torch_runs_ms": [
+        0.3973443526774645,
+        0.3946067998185754,
+        0.40393784875050187
+      ],
+      "infinicore_runs_ms": [
+        0.407522392924875,
+        0.40286084404215217,
+        0.4092358984053135
+      ]
+    },
+    {
+      "case": "conv1d",
+      "input_shape": [
+        1,
+        64,
+        16384
+      ],
+      "weight_shape": [
+        64,
+        1,
+        7
+      ],
+      "stride": 1,
+      "padding": 3,
+      "dilation": 1,
+      "groups": 64,
+      "torch_ms": 0.14859834918752313,
+      "infinicore_ms": 0.1840905984863639,
+      "speed_ratio": 0.8072022711063663,
+      "correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "torch_runs_ms": [
+        0.1533784088678658,
+        0.1483299070969224,
+        0.14859834918752313
+      ],
+      "infinicore_runs_ms": [
+        0.1840905984863639,
+        0.18382309935986996,
+        0.18445310415700078
+      ]
+    },
+    {
+      "case": "conv_transpose1d",
+      "input_shape": [
+        1,
+        1024,
+        207
+      ],
+      "weight_shape": [
+        1024,
+        512,
+        9
+      ],
+      "stride": 5,
+      "padding": 2,
+      "groups": 1,
+      "dilation": 1,
+      "torch_ms": 0.45461220433935523,
+      "infinicore_ms": 0.4554162034764886,
+      "speed_ratio": 0.9982345838136721,
+      "correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "torch_runs_ms": [
+        0.4569167038425803,
+        0.4542736569419503,
+        0.45461220433935523
+      ],
+      "infinicore_runs_ms": [
+        0.4591817036271095,
+        0.454851146787405,
+        0.4554162034764886
+      ]
+    },
+    {
+      "case": "conv_transpose1d",
+      "input_shape": [
+        1,
+        512,
+        1035
+      ],
+      "weight_shape": [
+        512,
+        1,
+        12
+      ],
+      "stride": 2,
+      "padding": 0,
+      "groups": 512,
+      "dilation": 1,
+      "torch_ms": 0.110678153578192,
+      "infinicore_ms": 0.14647134812548757,
+      "speed_ratio": 0.7556300600399323,
+      "correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "torch_runs_ms": [
+        0.10856365552172065,
+        0.110678153578192,
+        0.11549470946192741
+      ],
+      "infinicore_runs_ms": [
+        0.14724390348419547,
+        0.1458038459531963,
+        0.14647134812548757
+      ]
+    },
+    {
+      "case": "snake_beta",
+      "shape": [
+        1,
+        128,
+        16384
+      ],
+      "torch_ms": 0.1308927545323968,
+      "infinicore_ms": 0.14874690677970648,
+      "speed_ratio": 0.8799695897290045,
+      "correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "torch_runs_ms": [
+        0.13145875418558717,
+        0.1308927545323968,
+        0.1307557919062674
+      ],
+      "infinicore_runs_ms": [
+        0.14874690677970648,
+        0.1464953413233161,
+        0.15112990513443947
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+srun: job 1012804 queued and waiting for resources
+srun: job 1012804 has been allocated resources
+length=207 torch=0.0809ms nine=0.0481ms speedup=1.681x cos=1.00000000 max_abs=0.000e+00
+length=2048 torch=0.0822ms nine=0.0543ms speedup=1.514x cos=1.00000000 max_abs=0.000e+00
+length=16384 torch=0.1188ms nine=0.0488ms speedup=2.438x cos=0.99999994 max_abs=0.000e+00
+length=331200 torch=2.0213ms nine=0.8612ms speedup=2.347x cos=0.99999988 max_abs=0.000e+00
+[write] results/snake_beta_nt_dynamic.json
+[aot] kernel object: Handle
+[aot] built artifact: kernels/aot_snake_beta/built.pkl
+[file] kernels/aot_snake_beta/snake_beta_h3.triton.manifest.json.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3.triton.so 33152 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3.triton.manifest.json 18460 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_runtimectx.triton.manifest.json 18504 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_warpsize.triton.so.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_warpsize.triton.manifest.json 18496 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.so.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3.triton.so.lock 0 bytes
+[file] kernels/aot_snake_beta/built.pkl 893166 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_runtimectx.triton.so.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_runtimectx.triton.so 34160 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_runtimectx.triton.manifest.json.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_warpsize.triton.so 34080 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_warpsize.triton.manifest.json.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.so 33992 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.manifest.json.lock 0 bytes
+[file] kernels/aot_snake_beta/snake_beta_h3_fastctx.triton.manifest.json 18450 bytes
+debug length=16384 rows=128 bad_rows=0 first_bad=[]
+debug row0 actual=[0.5708489418029785, 0.1249648928642273, 3.836592674255371, -0.07047736644744873, 0.03144305944442749, 3.8604376316070557, 0.5460047125816345, 2.87172794342041] expected=[0.5708489418029785, 0.1249648928642273, 3.836592674255371, -0.07047736644744873, 0.03144305944442749, 3.8604376316070557, 0.5460047125816345, 2.87172794342041] alpha=0.82126957 beta=0.33646598
+length=16384 torch=0.1195ms aot=0.1071ms speedup=1.116x cos=1.00000000 max_abs=0.000e+00
+debug length=331200 rows=128 bad_rows=0 first_bad=[]
+debug row0 actual=[0.34588423371315, -0.6414778232574463, 1.4429171085357666, -0.4307989776134491, 0.029705550521612167, 1.4519356489181519, -0.9390643239021301, 1.1171506643295288] expected=[0.34588423371315, -0.6414778232574463, 1.4429171085357666, -0.4307989776134491, 0.029705550521612167, 1.4519356489181519, -0.9390643239021301, 1.1171506643295288] alpha=0.31975606 beta=3.24565148
+length=331200 torch=2.0174ms aot=1.0036ms speedup=2.010x cos=0.99999988 max_abs=0.000e+00
+[write] results/aot_snake_beta_runtime.json
