@@ -1,5 +1,40 @@
 add_rules("mode.debug", "mode.release")
-local PYBIND11_INC = os.getenv("PYBIND11_INCLUDE") or (os.getenv("HOME") .. "/venvs/infinilm/lib/python3.10/site-packages/pybind11/include")
+
+local PYTHON = os.getenv("PYTHON")
+if not PYTHON or PYTHON == "" then
+    PYTHON = is_host("windows") and "python" or "python3"
+end
+
+local function python_include_dir()
+    local configured = os.getenv("PYTHON_INCLUDE")
+    if configured and configured ~= "" then
+        return configured
+    end
+    local ok, out = pcall(function()
+        return os.iorunv(PYTHON, {"-c", "import sysconfig; print(sysconfig.get_path('include'))"}):trim()
+    end)
+    if ok and out and out ~= "" then
+        return out
+    end
+    return nil
+end
+
+local function pybind11_include_dir()
+    local configured = os.getenv("PYBIND11_INCLUDE")
+    if configured and configured ~= "" then
+        return configured
+    end
+    local ok, out = pcall(function()
+        return os.iorunv(PYTHON, {"-c", "import pybind11; print(pybind11.get_include())"}):trim()
+    end)
+    if ok and out and out ~= "" then
+        return out
+    end
+    return nil
+end
+
+local PYTHON_INCLUDE = python_include_dir()
+local PYBIND11_INC = pybind11_include_dir()
 -- [cluster] boost unused: add_requires("boost", {configs = {stacktrace = true}})
 -- [cluster] pip headers: add_requires("pybind11")
 
@@ -7,11 +42,6 @@ local PYBIND11_INC = os.getenv("PYBIND11_INCLUDE") or (os.getenv("HOME") .. "/ve
 local GREEN = '\27[0;32m'
 local YELLOW = '\27[1;33m'
 local NC = '\27[0m'  -- No Color
-local PYTHON = os.getenv("PYTHON")
-
-if not PYTHON or PYTHON == "" then
-    PYTHON = is_host("windows") and "python" or "python3"
-end
 
 set_encodings("utf-8")
 
@@ -856,7 +886,9 @@ target("infinicore_cpp_api")
     -- pybind11/embed.h for mha_kvcache branch
     if has_config("moore-gpu") and has_config("aten") and has_config("flash-attn") then
         add_defines("ENABLE_MOORE_MATE_FLASH_ATTN")
-        add_includedirs(PYBIND11_INC, {public = true})
+        if PYBIND11_INC and PYBIND11_INC ~= "" then
+            add_includedirs(PYBIND11_INC, {public = true})
+        end
     end
 
     before_build(function (target)
@@ -1089,7 +1121,13 @@ target("_infinicore")
 
     set_default(false)
     add_rules("python.library", {soabi = true})
-    add_includedirs("/public/software/sghpc_sdk/Linux_x86_64/25.6/das/conda/include/python3.10", {public = true})
+    if not PYTHON_INCLUDE or PYTHON_INCLUDE == "" then
+        raise("Python include directory not found; set PYTHON_INCLUDE or PYTHON to a working interpreter")
+    end
+    if not PYBIND11_INC or PYBIND11_INC == "" then
+        raise("pybind11 include directory not found; set PYBIND11_INCLUDE or install pybind11")
+    end
+    add_includedirs(PYTHON_INCLUDE, {public = true})
     add_includedirs(PYBIND11_INC, {public = true})
     set_languages("cxx17")
 
