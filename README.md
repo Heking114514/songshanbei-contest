@@ -1,12 +1,15 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-这个目录按官方要求准备三个独立仓库：
+本仓库是单卡基线固化仓库。组件来源和 commit 记录见 `BASELINE.md` 与 `VERSIONS.md`。
+
+这个目录按官方要求准备三个独立组件：
 
 ```text
 submit/
 ├── InfiniLM/       # stage1：我方 songshan_minimax 基线 + stage1_work
 ├── InfiniCore/     # stage1：我方 pull_20261106 基线
 ├── ninetoothed/     # stage1：我方 NineToothed 快照基线
+├── BASELINE.md
 ├── VERSIONS.md
 └── README.md
 ```
