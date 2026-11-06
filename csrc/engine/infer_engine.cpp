@@ -328,7 +328,13 @@ void InferEngine::reset_cache(const cache::CacheConfig *new_config) {
     for (auto &worker : workers_) {
         worker->wait();
     }
-    cache_config_ = new_config->unique_copy();
+    // MiniMax-H3 and other no-KV-cache models may reset with nullptr.
+    // Replace or clear the engine cache configuration accordingly.
+    if (new_config != nullptr) {
+        cache_config_ = new_config->unique_copy();
+    } else {
+        cache_config_.reset();
+    }
     this->compile();
 }
 

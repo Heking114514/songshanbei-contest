@@ -222,8 +222,13 @@ void RankWorker::reset_cache(const cache::CacheConfig *new_config) {
         throw std::runtime_error("RankWorker is closing; cannot reset_cache");
     }
 
-    // Store both the position and the new config
-    pending_cache_config_ = new_config->unique_copy();
+    // Store both the position and the new config.  A null config is valid for
+    // no-KV-cache models such as MiniMax-H3 and means "clear caches".
+    if (new_config != nullptr) {
+        pending_cache_config_ = new_config->unique_copy();
+    } else {
+        pending_cache_config_.reset();
+    }
     job_cmd_ = Command::RESET_CACHE;
     has_job_ = true;
     job_done_ = false;
