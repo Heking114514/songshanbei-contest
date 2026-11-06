@@ -1,0 +1,51 @@
+{
+  "hostname": "f11r1n03",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "results": [
+    {
+      "case": "mrope_h3_shape",
+      "seq": 4096,
+      "dtype": "bfloat16",
+      "native_ms": 0.779696018435061,
+      "runs_ms": [
+        0.7793258875608444,
+        0.779696018435061,
+        0.7797830039635301
+      ],
+      "q_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "k_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "case": "mrope_h3_shape",
+      "seq": 16384,
+      "dtype": "bfloat16",
+      "native_ms": 3.0771960970014334,
+      "runs_ms": [
+        3.0779421096667647,
+        3.0766681069508195,
+        3.0771960970014334
+      ],
+      "q_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "k_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    }
+  ],
+  "errors": []
+}

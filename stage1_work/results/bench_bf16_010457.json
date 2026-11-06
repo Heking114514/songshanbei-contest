@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-10-28T01:05:04",
+  "device": "cuda",
+  "dtype": "bf16",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "shapes": {
+    "hidden": 5376,
+    "heads": 56,
+    "head_dim": 128,
+    "ffn": 14336,
+    "rope_dim": 16,
+    "rope_theta": 10000.0,
+    "seq_lens": [
+      2048,
+      8192,
+      32768
+    ],
+    "estimated_tokens_720p_124f": 111600
+  },
+  "results": [],
+  "errors": [
+    {
+      "op": "rms_norm",
+      "seq": 2048,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    },
+    {
+      "op": "silu_and_mul",
+      "seq": 2048,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    },
+    {
+      "op": "linear",
+      "seq": 2048,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    },
+    {
+      "op": "rms_norm",
+      "seq": 8192,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    },
+    {
+      "op": "silu_and_mul",
+      "seq": 8192,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    },
+    {
+      "op": "linear",
+      "seq": 8192,
+      "error": "'infinicore.tensor' object has no attribute 'float'",
+      "trace": "Traceback (most recent call last):\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 195, in main\n    row = run_case(name, dtype, seq, builder)\n  File \"/public/home/xdzs2026_b0413/work/infinilm/bench/bench_op.py\", line 81, in run_case\n    stats = compare(torch_out.float(), ic_out.float())\n  File \"/public/home/xdzs2026_b0413/Projects/InfiniCore/python/infinicore/tensor.py\", line 47, in __getattr__\n    raise AttributeError(\nAttributeError: 'infinicore.tensor' object has no attribute 'float'\n"
+    }
+  ]
+}

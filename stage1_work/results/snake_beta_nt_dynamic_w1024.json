@@ -1,0 +1,65 @@
+{
+  "hostname": "f11r1n15",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "results": [
+    {
+      "shape": [
+        1,
+        128,
+        16384
+      ],
+      "block_m": 1,
+      "tile_width": 1024,
+      "num_warps": 4,
+      "torch_ms": 0.11885093990713358,
+      "ninetoothed_ms": 0.050710118375718594,
+      "speedup": 2.3437322513536607,
+      "torch_runs_ms": [
+        0.11885093990713358,
+        0.12109178118407726,
+        0.11868676170706749
+      ],
+      "ninetoothed_runs_ms": [
+        0.0517697399482131,
+        0.050710118375718594,
+        0.05064992234110832
+      ],
+      "correctness": {
+        "cosine": 0.9999999403953552,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "shape": [
+        1,
+        128,
+        331200
+      ],
+      "block_m": 1,
+      "tile_width": 1024,
+      "num_warps": 4,
+      "torch_ms": 2.0235092379152775,
+      "ninetoothed_ms": 0.8617369970306754,
+      "speedup": 2.3481749592831354,
+      "torch_runs_ms": [
+        2.0235092379152775,
+        2.0267299003899097,
+        2.0192427607253194
+      ],
+      "ninetoothed_runs_ms": [
+        0.861943019554019,
+        0.8617369970306754,
+        0.8614580007269979
+      ],
+      "correctness": {
+        "cosine": 0.9999998807907104,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    }
+  ],
+  "weight_preprocessing": "alpha_log.exp() and beta_log.exp() hoisted out of forward"
+}

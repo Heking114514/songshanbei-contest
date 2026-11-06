@@ -1,0 +1,32 @@
+{
+  "hostname": "f11r1n04",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "shape": [
+    1,
+    128,
+    16384
+  ],
+  "block_m": 1,
+  "num_warps": 4,
+  "torch_ms": 0.11966506019234657,
+  "ninetoothed_ms": 0.05415407940745354,
+  "speedup": 2.2097146050991014,
+  "torch_runs_ms": [
+    0.11969865765422583,
+    0.11966506019234657,
+    0.1193236606195569
+  ],
+  "ninetoothed_runs_ms": [
+    0.054517099633812904,
+    0.05415407940745354,
+    0.05392967723309994
+  ],
+  "correctness": {
+    "cosine": 1.0,
+    "max_abs": 0.0,
+    "mean_abs": 0.0
+  },
+  "weight_preprocessing": "alpha_log.exp() and beta_log.exp() hoisted out of forward"
+}

@@ -1,0 +1,30 @@
+{
+  "hostname": "f11r1n11",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "artifact": "/public/home/xdzs2026_b0413/work/infinilm/kernels/aot_snake_beta/snake_beta_h3_runtimectx.triton.so",
+  "results": [
+    {
+      "length": 16384,
+      "torch_ms": 0.12143982108682394,
+      "aot_ms": 0.10971651878207922,
+      "speedup": 1.1068508410117326,
+      "torch_runs_ms": [
+        0.12143982108682394,
+        0.12181284371763468,
+        0.12119521852582693
+      ],
+      "aot_runs_ms": [
+        0.10978672187775373,
+        0.10951051954180002,
+        0.10971651878207922
+      ],
+      "correctness": {
+        "cosine": 0.7096061706542969,
+        "max_abs": 29.49175453186035,
+        "mean_abs": 0.513825535774231
+      }
+    }
+  ]
+}

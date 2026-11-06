@@ -1,0 +1,256 @@
+{
+  "hostname": "f11r1n14",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "results": [
+    {
+      "case": "adaln_real_stride",
+      "seq": 8192,
+      "dtype": "bfloat16",
+      "baseline_ms": 2.1576212951913476,
+      "candidate_ms": 1.6418576939031482,
+      "speedup": 1.3141341683895194,
+      "candidate_correctness": {
+        "cosine": 0.9999968409538269,
+        "max_abs": 0.125,
+        "mean_abs": 0.0014969231560826302
+      },
+      "candidate_vs_baseline": {
+        "cosine": 0.9999972581863403,
+        "max_abs": 0.125,
+        "mean_abs": 0.0011359284399077296
+      },
+      "residual_baseline_ms": 1.372059085406363,
+      "residual_candidate_ms": 0.8555363863706589,
+      "residual_speedup": 1.6037413571933363,
+      "residual_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "residual_vs_baseline": {
+        "cosine": 0.9999972581863403,
+        "max_abs": 0.0625,
+        "mean_abs": 0.0010723223676905036
+      }
+    },
+    {
+      "case": "adaln_real_stride",
+      "seq": 32768,
+      "dtype": "bfloat16",
+      "baseline_ms": 8.58122140634805,
+      "candidate_ms": 6.500069377943873,
+      "speedup": 1.3201738177543105,
+      "candidate_correctness": {
+        "cosine": 0.9999967813491821,
+        "max_abs": 0.125,
+        "mean_abs": 0.0014980713604018092
+      },
+      "candidate_vs_baseline": {
+        "cosine": 0.9999971985816956,
+        "max_abs": 0.125,
+        "mean_abs": 0.0011367100523784757
+      },
+      "residual_baseline_ms": 5.445799697190523,
+      "residual_candidate_ms": 3.3746627857908607,
+      "residual_speedup": 1.6137315171519535,
+      "residual_correctness": {
+        "cosine": 1.000000238418579,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "residual_vs_baseline": {
+        "cosine": 0.9999973773956299,
+        "max_abs": 0.0625,
+        "mean_abs": 0.0010721134021878242
+      }
+    },
+    {
+      "case": "rms_norm_head_dim",
+      "shape": [
+        4096,
+        56,
+        128
+      ],
+      "dtype": "bfloat16",
+      "native_ms": 0.7719566657518347,
+      "runs_ms": [
+        0.7719566657518347,
+        0.7714996657644709,
+        0.7719963323324919
+      ],
+      "correctness": {
+        "cosine": 0.9999999403953552,
+        "max_abs": 0.03125,
+        "mean_abs": 2.3975839980039382e-08
+      }
+    },
+    {
+      "case": "rms_norm_head_dim",
+      "shape": [
+        16384,
+        56,
+        128
+      ],
+      "dtype": "bfloat16",
+      "native_ms": 3.0702347013478475,
+      "runs_ms": [
+        3.0706933699548244,
+        3.0702347013478475,
+        3.069954039528966
+      ],
+      "correctness": {
+        "cosine": 1.000000238418579,
+        "max_abs": 0.03125,
+        "mean_abs": 2.19541025359149e-08
+      }
+    },
+    {
+      "case": "mrope_h3_shape",
+      "seq": 4096,
+      "dtype": "bfloat16",
+      "native_ms": 0.779563095420599,
+      "runs_ms": [
+        0.7793450960889459,
+        0.7798042148351669,
+        0.779563095420599
+      ],
+      "q_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "k_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "case": "mrope_h3_shape",
+      "seq": 16384,
+      "dtype": "bfloat16",
+      "native_ms": 3.0774088110774755,
+      "runs_ms": [
+        3.078884887509048,
+        3.0770828016102314,
+        3.0774088110774755
+      ],
+      "q_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "k_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "case": "mrope_h3_shape",
+      "seq": 39216,
+      "dtype": "bfloat16",
+      "native_ms": 7.345895585604012,
+      "runs_ms": [
+        7.3463106993585825,
+        7.345727691426873,
+        7.345895585604012
+      ],
+      "q_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      },
+      "k_correctness": {
+        "cosine": 1.0,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "case": "mha_non_causal",
+      "seq": 1024,
+      "heads": 56,
+      "head_dim": 128,
+      "dtype": "bfloat16",
+      "native_ms": 0.29822600772604346,
+      "runs_ms": [
+        0.29803100042045116,
+        0.29842101503163576
+      ],
+      "peak_allocated_gib": 0.06857442855834961,
+      "correctness": {
+        "cosine": 0.9999958276748657,
+        "max_abs": 0.00390625,
+        "mean_abs": 0.00022971998259890825
+      },
+      "backend": {
+        "fused_sdp_choice_error": "module 'torch.nn.attention' has no attribute '_fused_sdp_choice'",
+        "can_use_flash": true
+      }
+    },
+    {
+      "case": "mha_non_causal",
+      "seq": 4096,
+      "heads": 56,
+      "head_dim": 128,
+      "dtype": "bfloat16",
+      "native_ms": 2.7819779003039002,
+      "runs_ms": [
+        2.782659907825291,
+        2.7812958927825093
+      ],
+      "peak_allocated_gib": 0.2742934226989746,
+      "correctness": {
+        "skipped": "long-sequence case measures memory/scaling only"
+      },
+      "backend": {
+        "fused_sdp_choice_error": "module 'torch.nn.attention' has no attribute '_fused_sdp_choice'",
+        "can_use_flash": true
+      }
+    },
+    {
+      "case": "mha_non_causal",
+      "seq": 8192,
+      "heads": 56,
+      "head_dim": 128,
+      "dtype": "bfloat16",
+      "native_ms": 10.003483504988253,
+      "runs_ms": [
+        10.00632531940937,
+        10.000641690567136
+      ],
+      "peak_allocated_gib": 0.5485854148864746,
+      "correctness": {
+        "skipped": "long-sequence case measures memory/scaling only"
+      },
+      "backend": {
+        "fused_sdp_choice_error": "module 'torch.nn.attention' has no attribute '_fused_sdp_choice'",
+        "can_use_flash": true
+      }
+    },
+    {
+      "case": "mha_non_causal",
+      "seq": 39216,
+      "heads": 56,
+      "head_dim": 128,
+      "dtype": "bfloat16",
+      "native_ms": 216.4775412141656,
+      "runs_ms": [
+        216.3081013907989,
+        216.6469810375323
+      ],
+      "peak_allocated_gib": 2.6261329650878906,
+      "correctness": {
+        "skipped": "long-sequence case measures memory/scaling only"
+      },
+      "backend": {
+        "fused_sdp_choice_error": "module 'torch.nn.attention' has no attribute '_fused_sdp_choice'",
+        "can_use_flash": true
+      }
+    }
+  ],
+  "errors": []
+}

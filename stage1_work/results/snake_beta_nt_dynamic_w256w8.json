@@ -1,0 +1,65 @@
+{
+  "hostname": "f11r1n15",
+  "torch": "2.5.1",
+  "hip": "6.3.25405",
+  "device": "BW",
+  "results": [
+    {
+      "shape": [
+        1,
+        128,
+        16384
+      ],
+      "block_m": 1,
+      "tile_width": 256,
+      "num_warps": 8,
+      "torch_ms": 0.12016578111797571,
+      "ninetoothed_ms": 0.0888254027813673,
+      "speedup": 1.3528312549704824,
+      "torch_runs_ms": [
+        0.12088158167898655,
+        0.12016578111797571,
+        0.1196097582578659
+      ],
+      "ninetoothed_runs_ms": [
+        0.0888701993972063,
+        0.08867760188877583,
+        0.0888254027813673
+      ],
+      "correctness": {
+        "cosine": 0.9999999403953552,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    },
+    {
+      "shape": [
+        1,
+        128,
+        331200
+      ],
+      "block_m": 1,
+      "tile_width": 256,
+      "num_warps": 8,
+      "torch_ms": 2.0182497007772326,
+      "ninetoothed_ms": 1.6937956400215626,
+      "speedup": 1.1915544314138982,
+      "torch_runs_ms": [
+        2.011976200155914,
+        2.0182497007772326,
+        2.0226344000548124
+      ],
+      "ninetoothed_runs_ms": [
+        1.6937956400215626,
+        1.6944758361205459,
+        1.6906687803566456
+      ],
+      "correctness": {
+        "cosine": 0.9999998807907104,
+        "max_abs": 0.0,
+        "mean_abs": 0.0
+      }
+    }
+  ],
+  "weight_preprocessing": "alpha_log.exp() and beta_log.exp() hoisted out of forward"
+}
