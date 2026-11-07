@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import weakref
 from dataclasses import dataclass, fields
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +12,7 @@ from infinilm.cache import StaticKVCacheConfig
 from infinilm.distributed import DistConfig
 from infinilm.infer_engine import InferEngine
 from infinilm.modeling_utils import load_model_state_dict_by_file
+from infinilm.multimodal.minimax_h3_cache import MiniMaxH3ConditionCache
 from transformers import AutoConfig, Qwen3VLForConditionalGeneration
 from transformers.modeling_outputs import BaseModelOutputWithPast
 
@@ -47,9 +47,9 @@ class MiniMaxH3TransformerInputs:
     text_indices: torch.Tensor
 
     def validate(self) -> None:
-        sequence_length = self.position_ids.shape[0]
         if self.position_ids.ndim != 2 or self.position_ids.shape[1] != 3:
             raise ValueError("position_ids must have shape [sequence_length, 3]")
+        sequence_length = self.position_ids.shape[0]
         if self.timestep.ndim != 1:
             raise ValueError("timestep must have shape [num_timesteps]")
         for name in ("timestep_indices", "token_tags"):
@@ -84,6 +84,15 @@ class MiniMaxH3TransformerInputs:
             tensor = getattr(self, name)
             if tensor.ndim != 3 or tensor.shape[0] != 1:
                 raise ValueError(f"{name} must have shape [1, tokens, channels]")
+        for states_name, indices_name in (
+            ("video_hidden_states", "video_indices"),
+            ("audio_hidden_states", "audio_indices"),
+            ("encoder_hidden_states", "text_indices"),
+        ):
+            if getattr(self, states_name).shape[1] != getattr(self, indices_name).numel():
+                raise ValueError(f"{indices_name} must contain one index per {states_name} token")
+        if sum(t.numel() for t in (self.video_indices, self.audio_indices, self.text_indices)) != sequence_length:
+            raise ValueError("Packed modality token counts must match position_ids")
 
 
 @dataclass(frozen=True)
@@ -436,7 +445,7 @@ class MiniMaxH3TransformerRunner:
             distributed_config = DistConfig(tp_size=tp_size)
 
         self.device = infinicore.device(_runtime_device_type(device), device_id)
-        self._text_cache_source_ref: weakref.ReferenceType[torch.Tensor] | None = None
+        self._condition_cache = MiniMaxH3ConditionCache()
         self._static_torch_inputs: tuple[torch.Tensor, torch.Tensor] | None = None
         self._static_native_inputs: tuple[infinicore.Tensor, infinicore.Tensor] | None = None
         self.engine = InferEngine(
@@ -452,6 +461,14 @@ class MiniMaxH3TransformerRunner:
                 str(self.transformer_path),
                 dtype=self.engine.dtype,
             )
+
+    def begin_generation(self) -> int:
+        """Start one request; call before its denoising loop, even for the same prompt."""
+        self.engine.reset_cache(None)
+        generation_id = self._condition_cache.begin_generation()
+        self._static_torch_inputs = None
+        self._static_native_inputs = None
+        return generation_id
 
     @staticmethod
     def _to_infinicore(tensor: torch.Tensor) -> infinicore.Tensor:
@@ -475,19 +492,24 @@ class MiniMaxH3TransformerRunner:
         return_torch: bool = True,
     ) -> MiniMaxH3TransformerOutput:
         inputs.validate()
-        text_source = inputs.encoder_hidden_states
-        cached_source = (
-            self._text_cache_source_ref()
-            if self._text_cache_source_ref is not None
-            else None
+        if self._condition_cache.generation_id == 0:
+            self.begin_generation()
+        # Text and positions can be inference tensors, which have no version
+        # counter. Compare retained snapshots to also detect in-place changes.
+        metadata = (
+            self.engine.dtype, self.rope_freq_dim, self.rope_theta,
+            tuple(
+                (tuple(t.shape), t.dtype, t.device)
+                for t in (
+                    inputs.video_hidden_states, inputs.audio_hidden_states,
+                    inputs.video_indices, inputs.audio_indices, inputs.text_indices,
+                )
+            ),
         )
-        new_generation = cached_source is not text_source
-        if new_generation:
-            # A new prompt embedding invalidates both native text and static
-            # layout caches.
-            self.engine.reset_cache(None)
-            self._text_cache_source_ref = weakref.ref(text_source)
-            self._static_torch_inputs = (
+        if not self._condition_cache.matches(
+            inputs.encoder_hidden_states, inputs.position_ids, metadata
+        ):
+            static_torch = (
                 minimax_h3_rotary_cache(
                     inputs.position_ids,
                     rope_freq_dim=self.rope_freq_dim,
@@ -500,21 +522,31 @@ class MiniMaxH3TransformerRunner:
                     device=inputs.position_ids.device,
                 ),
             )
-            self._static_native_inputs = tuple(
-                self._to_infinicore(tensor) for tensor in self._static_torch_inputs
+            static_native = tuple(self._to_infinicore(t) for t in static_torch)
+            self._condition_cache.update(
+                inputs.encoder_hidden_states, inputs.position_ids, metadata
             )
+            self._static_torch_inputs = static_torch
+            self._static_native_inputs = static_native
         if self._static_native_inputs is None:
             raise RuntimeError("MiniMax-H3 static input cache was not initialized")
         torch_inputs = {
             field.name: getattr(inputs, field.name) for field in fields(inputs)
         }
+        # Continuous positions are consumed by the RoPE cache above. The native
+        # engine receives cached integer indices, not the original coordinates
+        # (which Diffusers may construct in float64).
         native_inputs = {
-            name: self._to_infinicore(tensor) for name, tensor in torch_inputs.items()
+            name: self._to_infinicore(tensor)
+            for name, tensor in torch_inputs.items()
+            if name != "position_ids"
         }
         native_inputs["rotary_cos_sin_cache"], native_inputs["position_ids"] = (
             self._static_native_inputs
         )
-        output = self.engine.forward_raw(None, **native_inputs)
+        output = self.engine.forward_raw(
+            None, minimax_h3_cache_id=self._condition_cache.revision, **native_inputs
+        )
         video = output["logits"]
         audio = output["hidden_states"]
         if return_torch:
@@ -537,6 +569,9 @@ class MiniMaxH3DiffusersAdapter(torch.nn.Module):
         self.runner = runner
         self._dtype = dtype
         self.config = SimpleNamespace(**runner.engine.hf_config)
+
+    def begin_generation(self) -> int:
+        return self.runner.begin_generation()
 
     @property
     def dtype(self) -> torch.dtype:

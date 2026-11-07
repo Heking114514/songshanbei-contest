@@ -530,12 +530,14 @@ InfinilmModel::Output MiniMaxH3Transformer::forward(const Input &input) const {
     auto video_embeds = cast_to(linear_forward(proj_in_, video_input), dtype_);
     auto audio_embeds = cast_to(linear_forward(audio_proj_in_, audio_input), dtype_);
 
-    const void *text_source = encoder_hidden_states->data();
-    if (!cached_text_embeddings_.has_value() || cached_text_source_ != text_source) {
+    // Pointer identity is unsafe after in-place writes or rank-local allocation reuse.
+    // Only callers supplying a conditioning revision opt into text reuse.
+    if (!input.minimax_h3_cache_id.has_value() || !cached_text_embeddings_.has_value()
+        || cached_text_cache_id_ != input.minimax_h3_cache_id) {
         auto text_input = cast_to(encoder_hidden_states, dtype_);
         auto context_embeds = linear_forward(context_embedder_, text_input);
         cached_text_embeddings_ = token_refiner_->forward(context_embeds);
-        cached_text_source_ = text_source;
+        cached_text_cache_id_ = input.minimax_h3_cache_id;
     }
     auto text_embeds = cached_text_embeddings_.value();
 
@@ -575,7 +577,7 @@ void MiniMaxH3Transformer::reset_cache(const cache::CacheConfig *cache_config) {
     (void)cache_config;
     cache_config_.reset();
     cached_text_embeddings_.reset();
-    cached_text_source_ = nullptr;
+    cached_text_cache_id_.reset();
     infinilm::global_state::get_forward_context().kv_cache_vec.clear();
 }
 

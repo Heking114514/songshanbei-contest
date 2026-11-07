@@ -10,6 +10,7 @@
 #include "rank_barrier.hpp"
 
 #include <any>
+#include <cstdint>
 #include <condition_variable>
 #include <mutex>
 #include <random>
@@ -98,6 +99,9 @@ public:
         int top_k{50};
 
         float top_p{1};
+
+        /// Caller-managed H3 conditioning revision, copied unchanged to every TP rank.
+        std::optional<int64_t> minimax_h3_cache_id;
 
         infinilm::InfinilmModel::Input to_model_input(infinicore::Device device) const;
     };

@@ -29,10 +29,9 @@ local function add_hygon_dtk_paths(attrs)
         return
     end
 
-    local include_dirs = {
-        path.join(dtk_root, "include"),
-        path.join(dtk_root, "cuda", "include"),
-    }
+    -- Keep CUB, Thrust and libcudacxx from the selected CUDA compatibility
+    -- toolkit together. DTK's top-level Thrust can be a different version.
+    local include_dirs = {}
     local link_dirs = {
         path.join(dtk_root, "lib"),
         path.join(dtk_root, "cuda", "lib64"),
@@ -46,9 +45,18 @@ local function add_hygon_dtk_paths(attrs)
         table.insert(link_dirs, path.join(cuda_root, "targets", "x86_64-linux", "lib"))
     end
 
+    table.insert(include_dirs, path.join(dtk_root, "include"))
+    table.insert(include_dirs, path.join(dtk_root, "cuda", "include"))
+
     for _, include_dir in ipairs(include_dirs) do
         if os.isdir(include_dir) then
-            add_includedirs(include_dir, attrs)
+            -- DCC treats its CUDA headers as system paths and discards a
+            -- duplicate -I for them. A regular -I for the DTK root would then
+            -- precede CUDA's bundled Thrust despite the order above.
+            add_sysincludedirs(include_dir, attrs)
+            -- xmake's nvcc adapter maps sysincludedirs back to -I. Keep
+            -- explicit grouped flags so DCC uses one matching Thrust/CUB SDK.
+            add_cuflags("-isystem " .. include_dir, {force = true})
         end
     end
     for _, link_dir in ipairs(link_dirs) do
@@ -135,8 +143,8 @@ target("infiniop-hygon")
     add_cuflags("-Xclang", "-fno-cuda-host-device-constexpr", {force = true})
     add_cuflags("-fPIC", "-std=c++17", {force = true})
     add_culdflags("-fPIC")
-    add_cxflags("-fPIC")
-    add_cxxflags("-fPIC")
+    add_cxflags("-fPIC", "-Wno-unknown-pragmas")
+    add_cxxflags("-fPIC", "-Wno-unknown-pragmas")
 
     add_cuflags("-arch=" .. HYGON_ARCH)
     

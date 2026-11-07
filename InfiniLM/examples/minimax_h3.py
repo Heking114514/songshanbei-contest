@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, Sequence
 
+import numpy as np
 import torch
 from accelerate import dispatch_model, infer_auto_device_map, init_empty_weights
 from accelerate.utils import set_module_tensor_to_device
@@ -704,7 +705,21 @@ def validate_generation_output(result: dict[str, Any], num_frames: int) -> None:
     """Fail before media encoding if decoded output violates H3's contract."""
 
     videos = result.get("videos")
-    video_shape = tuple(getattr(videos, "shape", ()))
+    if isinstance(videos, (list, tuple)):
+        if len(videos) != 1:
+            raise RuntimeError("Generated video must contain exactly one batch item")
+        # Diffusers' default output is a batch of frame lists (PIL images).
+        # Validate every frame without changing the container used by encode_video.
+        video = videos[0]
+        if isinstance(video, (list, tuple)):
+            frame_shapes = [tuple(np.asarray(frame).shape) for frame in video]
+            if not frame_shapes or any(s != frame_shapes[0] for s in frame_shapes):
+                raise RuntimeError("Generated video contains empty or inconsistent frames")
+            video_shape = (len(frame_shapes), *frame_shapes[0])
+        else:
+            video_shape = tuple(getattr(video, "shape", ()))
+    else:
+        video_shape = tuple(getattr(videos, "shape", ()))
     if len(video_shape) == 5 and video_shape[0] == 1:
         video_shape = video_shape[1:]
     if len(video_shape) != 4:
@@ -800,6 +815,9 @@ def main() -> None:
             torch.inference_mode(),
             timings.measure("generation.pipeline_total", synchronize=True),
         ):
+            if not args.legacy:
+                generation_id = transformer.begin_generation()
+                print(f"[generate] generation_id={generation_id}")
             result = pipe(**generation_kwargs)
             validate_generation_output(result, prepared["num_frames"])
     finally:

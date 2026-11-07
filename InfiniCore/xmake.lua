@@ -921,8 +921,13 @@ target("infinicore_cpp_api")
         end
 
         if has_config("aten") then
-            local outdata = os.iorunv(PYTHON, {"-c", "import torch, os; print(os.path.dirname(torch.__file__))"}):trim()
-            local TORCH_DIR = outdata
+            local TORCH_DIR = os.getenv("INFINICORE_TORCH_DIR")
+            if not TORCH_DIR or TORCH_DIR == "" then
+                TORCH_DIR = os.iorunv(PYTHON, {"-c", "import torch, os; print(os.path.dirname(torch.__file__))"}):trim()
+            end
+            if not os.isdir(path.join(TORCH_DIR, "include")) or not os.isdir(path.join(TORCH_DIR, "lib")) then
+                raise("Invalid Torch directory: " .. TORCH_DIR)
+            end
 
             target:add(
                 "includedirs", 

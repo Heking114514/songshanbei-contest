@@ -250,7 +250,8 @@ InferEngine::Input::to_model_input(infinicore::Device device) const {
         to_device(audio_indices),
         to_device(text_indices),
         to_device(target_hidden_states),
-        sample_all_positions};
+        sample_all_positions,
+        minimax_h3_cache_id};
 
     if (serialize_host_copy) {
         infinicore::context::syncStream();

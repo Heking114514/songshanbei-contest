@@ -1,0 +1,11 @@
+# Local Python and test caches
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Node-local H3 build/install and generated compare results
+/.h3-install/
+/.h3-xmake/
+/.h3-xmake-global/
+/h3-compare-*/
+/build-h3.log

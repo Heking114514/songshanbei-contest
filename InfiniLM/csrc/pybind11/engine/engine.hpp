@@ -213,6 +213,7 @@ inline void bind_infer_engine(py::module &m) {
                     "temperature",
                     "top_p",
                     "top_k",
+                    "minimax_h3_cache_id",
                 };
 
                 for (auto &item : kwargs) {
@@ -223,7 +224,11 @@ inline void bind_infer_engine(py::module &m) {
                             "InferEngine.Input got an unexpected keyword argument '" + key + "'");
                     }
 
-                    if (key == "temperature") {
+                    if (key == "minimax_h3_cache_id") {
+                        if (!item.second.is_none()) {
+                            input.minimax_h3_cache_id = py::cast<int64_t>(item.second);
+                        }
+                    } else if (key == "temperature") {
                         input.temperature = py::cast<float>(item.second);
                     } else if (key == "top_p") {
                         input.top_p = py::cast<float>(item.second);
@@ -290,6 +295,7 @@ inline void bind_infer_engine(py::module &m) {
         .def_readwrite("text_indices", &InferEngine::Input::text_indices)
         .def_readwrite("target_hidden_states", &InferEngine::Input::target_hidden_states)
         .def_readwrite("sample_all_positions", &InferEngine::Input::sample_all_positions)
+        .def_readwrite("minimax_h3_cache_id", &InferEngine::Input::minimax_h3_cache_id)
         .def_readwrite("temperature", &InferEngine::Input::temperature)
         .def_readwrite("top_k", &InferEngine::Input::top_k)
         .def_readwrite("top_p", &InferEngine::Input::top_p);

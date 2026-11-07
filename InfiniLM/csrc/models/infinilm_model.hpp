@@ -6,6 +6,7 @@
 #include "infinicore/nn/module.hpp"
 #include "infinicore/tensor.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -77,6 +78,8 @@ public:
         std::optional<infinicore::Tensor> target_hidden_states;
         /// Preserve logits for every packed position for speculative/MTP callers.
         bool sample_all_positions{false};
+        /// H3 conditioning revision; absent means recompute without reusing text.
+        std::optional<int64_t> minimax_h3_cache_id;
     };
 
     struct Output {
