@@ -1,4 +1,6 @@
 # Version Lock
+> 2026-11-07 19:49:12 +08:00 发布状态：本轮原生 TP8 源码已提交并推送到 codex/eight-card-handover，源码 commit 为 ee93718a59c4c2251aee5a5c5da6c6b33daa085b，匿名 GitHub API 已确认可访问。后续文档修订以分支最新 HEAD 为准。原生正式生成已完成；完整官方 compare 和公开源码构建实测仍待完成。
+
 
 更新时间：2026-11-07 19:44:41 +08:00（北京时间）。
 

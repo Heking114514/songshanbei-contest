@@ -2,6 +2,8 @@
 
 本仓库包含 InfiniLM、InfiniCore、NineToothed。完整H3原生TP8的124帧/50步FL2VA已成功生成；官方compare已执行，但参考进程因HIP检测不到GPU失败，报告SKIPPED，尚无SSIM结论。
 
+**官方模板逐项核对记录保存在本地工作区 handover/官方模板逐项核对.md，不随源码仓库发布。** 本轮源码已公开提交为 [ee93718](https://github.com/Heking114514/songshanbei-contest/commit/ee93718a59c4c2251aee5a5c5da6c6b33daa085b)；当前仍缺完整 compare 和评审从源码构建的实测闭环。
+
 **复现与官方提交材料见 [复现与提交说明.md](复现与提交说明.md)**，包括统一图片/提示词、-j120源码构建到运行、已编译资产恢复、真实compare输出及失败分析。组件来源见 `BASELINE.md` 与 `VERSIONS.md`。
 
 目录包含三个组件：
