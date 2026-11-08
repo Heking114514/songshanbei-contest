@@ -1,0 +1,27 @@
+[timing comparison] FL2VA
+  component                                   PyTorch (s) InfiniLM (s)    speedup
+  ------------------------------------------ ------------ ------------ ----------
+  model.pipeline_create                            10.605          n/a        n/a
+  model.condition_encoder_create_and_load          19.187          n/a        n/a
+  model.transformer_create_and_load                17.503          n/a        n/a
+  model.remaining_components_create_and_load        9.966          n/a        n/a
+  input.files_and_references                        0.459          n/a        n/a
+  input.arguments                                   0.000          n/a        n/a
+  compute.condition_encoder                         5.544          n/a        n/a
+  input.video_vae_encode                            1.801          n/a        n/a
+  input.audio_vae_encode                            0.000          n/a        n/a
+  compute.h3_transformer                         2763.188          n/a        n/a
+  output.video_vae_decode                          29.865          n/a        n/a
+  output.audio_vae_decode                          30.844          n/a        n/a
+  generation.pipeline_total                      2835.726          n/a        n/a
+  output.media_encode                               1.909          n/a        n/a
+  total.end_to_end                               2895.375          n/a        n/a
+  pipeline.other_preprocess_scheduler               4.484          n/a        n/a
+  process.wall                                   3015.783          n/a        n/a
+
+[result] MiniMax-H3 video comparison
+
+  FL2VA
+    Size:         PASS (PyTorch 768x928, InfiniLM 768x928)
+    Length:       PASS (PyTorch 124 frames, InfiniLM 124 frames)
+    Average SSIM: 94.277%

@@ -1,0 +1,22 @@
+# Keep node entry points usable after Windows checkout.
+/scripts/*.sh text eol=lf
+/scripts/*.py text eol=lf
+/scripts/h3_compare_hook/*.py text eol=lf
+/tests/test_h3_bootstrap.py text eol=lf
+/requirements/*.txt text eol=lf
+/third_party/h3/*.py text eol=lf
+/third_party/h3/*.whl binary
+/third_party/h3/*.tar.gz binary
+/third_party/h3/*.run binary
+/inputs/*.png binary
+
+# Keep documentation and hashed lock/manifest inputs stable across checkouts.
+*.md text eol=lf
+/requirements/*.json text eol=lf
+/results/*.json text eol=lf
+/results/*.txt text eol=lf
+/third_party/h3/manifest.json text eol=lf
+/.gitattributes text eol=lf
+/.gitignore text eol=lf
+# Preserve bundled upstream license text, including its original final blank lines.
+/third_party/h3/LICENSE.* text eol=lf -whitespace

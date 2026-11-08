@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "platform": {
+    "python": "3.11",
+    "system_torch": "2.9.0",
+    "hip": "6.3.26093",
+    "arch": "gfx936",
+    "dtk_root": "/opt/dtk"
+  },
+  "files": [
+    {
+      "path": "third_party/h3/flagtree-0.7.0+hcu3.6-cp311-cp311-linux_x86_64.whl",
+      "size": 72231003,
+      "sha256": "c7e67f30152702395455ccc440949fecfce5ed4c63a04ede23dfe1802061b714"
+    },
+    {
+      "path": "third_party/h3/hcu-jit-clang18-minimal.tar.gz",
+      "size": 74463838,
+      "sha256": "a02d84692478a15b141266c321827a31581eff57273866ea652eecf2214054e2"
+    },
+    {
+      "path": "third_party/h3/xmake-v3.0.3.gz.run",
+      "size": 3030123,
+      "sha256": "50842cf3a77436bc97fccc7c74935a0ed002bc44afa69cf05fb2b5b8463279d9"
+    }
+  ],
+  "flagtree": {
+    "commit": "47970467c4d75a9cfffb84426383c7e7a9f2557a",
+    "source_url": "https://codeload.github.com/flagos-ai/FlagTree/tar.gz/47970467c4d75a9cfffb84426383c7e7a9f2557a",
+    "source_sha256": "31cd442562f0278f4f0f9cd02df3efd2d9c045516e263fc1fcf01bd738aeba48",
+    "archive_sha256": "b5e4fb139947e5aa182338c25704bcdc4844561ba355fc15ff0f03bbb3157a76",
+    "excluded": [
+      ".git",
+      ".github",
+      "benchmarks",
+      "docs",
+      "examples",
+      "tests",
+      "tutorials"
+    ],
+    "backends": [
+      "amd",
+      "hcu",
+      "nvidia",
+      "proton"
+    ]
+  },
+  "jit_toolchain": {
+    "source_repository": "harbor.baai.ac.cn/flagtree/flagtree-hcu-py310-torch2.10.0-dtk26.04-ubuntu22.04",
+    "source_layer": "sha256:630032d42d85494e5c3ea8fc6173fb4ec207d8550d0c456d999b9a584c8f3600",
+    "binaries": {
+      "clang-18": "be99756419949da6fecb431bbd0309b29e5efacf55120f997074ef48766e7b43",
+      "lld": "f2591ae2ae45bfe8d10c3c1cac1340e24ca5776dd131ec67f841a0d0787e78f3"
+    },
+    "note": "Archive differs from historical AFS ready archive; both compiler binaries match. Fresh JIT required for this reproduction."
+  },
+  "xmake": {
+    "version": "3.0.3",
+    "url": "https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-v3.0.3.gz.run"
+  }
+}

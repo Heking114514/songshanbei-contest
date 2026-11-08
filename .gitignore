@@ -9,3 +9,6 @@ __pycache__/
 /.h3-xmake-global/
 /h3-compare-*/
 /build-h3.log
+
+# Fresh-clone reproduction environment, downloads, JIT, logs
+/.h3-reproduction/

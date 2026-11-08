@@ -12,6 +12,7 @@ export FIRST_FRAME="${FIRST_FRAME:-$H3_SOURCE_ROOT/inputs/first_frame.png}"
 test ! -e "$OUTPUT_DIR" || { printf 'Refusing existing OUTPUT_DIR: %s\n' "$OUTPUT_DIR" >&2; exit 1; }
 mkdir -p "$OUTPUT_DIR"
 export OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
+export H3_REFERENCE_MAX_HEADS="${H3_REFERENCE_MAX_HEADS:-4}"
 export H3_COMPARE_BF16_MATH=1 PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="$TOOLS/h3_compare_hook:$TOOLS:${PYTHONPATH:-}"
 finish() {

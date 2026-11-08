@@ -7,7 +7,7 @@ export PYTHON="${H3_PYTHON:-$(command -v python3)}"
 export DTK_ROOT="${DTK_ROOT:-/opt/dtk}"
 export HYGON_CUDA_HOME="${HYGON_CUDA_HOME:-$DTK_ROOT/cuda/cuda}"
 export HYGON_ARCH="${HYGON_ARCH:-gfx936}"
-export INFINI_ROOT="${INFINI_ROOT:-${IFAB_AFS_HOME:?Set INFINI_ROOT or IFAB_AFS_HOME}/handover/install}"
+export INFINI_ROOT="${INFINI_ROOT:-$REPO_ROOT/.h3-install}"
 export PATH="$HYGON_CUDA_HOME/bin:$DTK_ROOT/bin:$PATH"
 export OMP_NUM_THREADS="${BUILD_PYTHON_THREADS:-1}"
 export OPENBLAS_NUM_THREADS="${BUILD_PYTHON_THREADS:-1}"
@@ -53,11 +53,34 @@ fi
 test -x "$HYGON_CUDA_HOME/bin/nvcc"
 command -v xmake
 printf 'Torch %s HIP %s ABI %s\n' "${PYTHON_BUILD_VALUES[4]}" "${PYTHON_BUILD_VALUES[5]}" "$INFINILM_CXX11_ABI"
+configure_component() {
+    component="$1"
+    shift
+    if [ "${BUILD_SKIP_CONFIGURE:-0}" = 1 ]; then
+        printf '[configure] explicit skip %s\n' "$component"
+        return
+    fi
+    key=""
+    marker=""
+    if [ -n "${H3_CONFIG_CACHE:-}" ]; then
+        mkdir -p "$H3_CONFIG_CACHE"
+        key="$("$PYTHON" "$REPO_ROOT/scripts/h3_bootstrap.py" config-key "$component")"
+        marker="$H3_CONFIG_CACHE/$component.sha256"
+        if [ -f "$marker" ] && [ "$(cat "$marker")" = "$key" ] \
+            && [ -s .xmake/linux/x86_64/xmake.conf ]; then
+            printf '[configure] unchanged %s; reuse existing xmake configuration\n' "$component"
+            return
+        fi
+    fi
+    xmake f "$@"
+    if [ -n "$marker" ]; then
+        printf '%s\n' "$key" > "$marker.partial"
+        mv -f "$marker.partial" "$marker"
+    fi
+}
 printf '[1/5] Configure InfiniCore (ATen on, CCL on, NineToothed Python JIT)\n'
 cd "$REPO_ROOT/InfiniCore"
-if [ "${BUILD_SKIP_CONFIGURE:-0}" != 1 ]; then
-xmake f "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --hygon-dcu=y --hygon-arch="$HYGON_ARCH" --cuda="$HYGON_CUDA_HOME" --aten=y --ccl=y --ninetoothed=n --omp=n --cxxflags="-D_GLIBCXX_USE_CXX11_ABI=$INFINILM_CXX11_ABI"
-fi
+configure_component InfiniCore "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --hygon-dcu=y --hygon-arch="$HYGON_ARCH" --cuda="$HYGON_CUDA_HOME" --aten=y --ccl=y --ninetoothed=n --omp=n --cxxflags="-D_GLIBCXX_USE_CXX11_ABI=$INFINILM_CXX11_ABI"
 printf '[2/5] Build and install InfiniCore\n'
 for dependency in infiniop infinirt infiniccl; do
     xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" "$dependency"
@@ -66,12 +89,12 @@ done
 test -s "$INFINI_ROOT/include/infiniop.h"
 xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" infinicore_cpp_api
 xmake install -y infinicore_cpp_api
-xmake build -y -j "$JOBS" _infinicore
+xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" _infinicore
 xmake install -y _infinicore
 printf '[3/5] Build and install InfiniLM\n'
 cd "$REPO_ROOT/InfiniLM"
-xmake f -y -m release --ccache=n --cxx11-abi="$INFINILM_CXX11_ABI"
-xmake build -y -j "$JOBS" _infinilm
+configure_component InfiniLM "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --cxx11-abi="$INFINILM_CXX11_ABI"
+xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" _infinilm
 xmake install -y _infinilm
 printf '[4/5] Register source packages and import native extensions\n'
 export PYTHONPATH="$REPO_ROOT/InfiniCore/python:$REPO_ROOT/InfiniLM/python:$REPO_ROOT/ninetoothed/src:${PYTHONPATH:-}"

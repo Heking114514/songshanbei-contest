@@ -1,88 +1,41 @@
-# MiniMax-H3 八卡阶段提交工作区
+# MiniMax-H3 八卡提交仓库
 
-本仓库包含 InfiniLM、InfiniCore、NineToothed。完整H3原生TP8的124帧/50步FL2VA已成功生成；官方compare已执行，但参考进程因HIP检测不到GPU失败，报告SKIPPED，尚无SSIM结论。
+更新时间：2026-11-08T12:32:27+08:00（北京时间）。
 
-**官方模板逐项核对记录保存在本地工作区 handover/官方模板逐项核对.md，不随源码仓库发布。** 本轮源码已公开提交为 [ee93718](https://github.com/Heking114514/songshanbei-contest/commit/ee93718a59c4c2251aee5a5c5da6c6b33daa085b)；当前仍缺完整 compare 和评审从源码构建的实测闭环。
+本仓库整合InfiniLM、InfiniCore和NineToothed，包含H3环境准备、-j120增量构建、单卡开发自验、八卡短推理和官方FL2VA比较入口。完整命令见[REPRODUCE.md](REPRODUCE.md)，版本/依赖见[VERSIONS.md](VERSIONS.md)，报告内容见[复现与提交说明](复现与提交说明.md)。
 
-**复现与官方提交材料见 [复现与提交说明.md](复现与提交说明.md)**，包括统一图片/提示词、-j120源码构建到运行、已编译资产恢复、真实compare输出及失败分析。组件来源见 `BASELINE.md` 与 `VERSIONS.md`。
+## 已核实的运行范围
 
-目录包含三个组件：
-
-```text
-submit_repo/
-├── InfiniLM/       # stage1：我方 songshan_minimax 基线 + stage1_work
-├── InfiniCore/     # stage1：我方 pull_20261106 基线
-├── ninetoothed/     # stage1：我方 NineToothed 快照基线
-├── BASELINE.md
-├── VERSIONS.md
-└── README.md
-```
-
-## 平台与模型
-
-- 使用平台单节点八卡实例；开始推理前需有有效租约，并通过实际 HIP/Torch 逐卡计算预检。
-- 平台操作统一走 CLI：`/d/Desktop/songshan workspace/ifab/ifab.py`。
-- `ifab_frontend` 仅作浏览器端参考，不作为自动化入口。
-- 已有 token 时先用 `python ifab.py --json status`；只有 token 失效才重新登录。
-- 已核实正式权重位于共享目录 `/public/home/aclsylqidf/shared/MiniMax-H3`，包括 `FL2VA` 和 `diffusers`，无需复制到个人 AFS。
-- `$IFAB_AFS_HOME/handover` 保存构建文件、环境、输入和日志。个人配额为 4 GiB，应保留足够的编译空间。
-
-```bash
-cd "/d/Desktop/songshan workspace/ifab"
-python ifab.py --json status
-
-# 以下两行在平台 Bash 内执行。
-export MODEL_PATH=/public/home/aclsylqidf/shared/MiniMax-H3
-ls "$MODEL_PATH/FL2VA" "$MODEL_PATH/diffusers"
-```
-
-## 先读
-
-1. `VERSIONS.md`：整合仓库、三个组件的来源和当前验证状态。
-2. `../八卡阶段代码边界与改造审计.md`：赛事边界、P0、工单和验收。
-3. `InfiniLM/stage1_work/README.md`：单卡阶段证据和限制。
-4. `../reference/`：官方 InfiniLM、InfiniCore 参考仓库；只做 diff，不作为提交基线。
-
-## Git Bash 约定
-
-所有命令在 **Git Bash** 中执行。禁止 PowerShell/pwsh 执行或包装：
-
-```bash
-cd "/d/Desktop/songshan workspace/submit_repo"
-pwd
-git status --short --branch
-```
-
-## 单卡组件来源
-
-| 组件 | 历史基线分支 | 内容 |
+| 验收 | 实际结果 | 边界 |
 |---|---|---|
-| InfiniLM | `stage1` | 我方 `songshan_minimax` 基线 + `stage1_work/` 证据 |
-| InfiniCore | `stage1` | 我方 `pull_20261106` 基线 + SnakeBeta/接口/后端增量 |
-| NineToothed | `stage1` | 我方快照基线；官方 commit 待确认 |
+| 历史完整native TP8生成 | 完整层数、124帧、50步请求/49次DiT、768×928 | 历史独立运行，加载至保存542.131秒 |
+| 历史原版FL2VA compare | Size/Length PASS，SSIM94.277% | 新生成reference、复用已核验native；native时间n/a，没有同轮加速比 |
+| 新环境源码构建 | 新Python依赖目录和1194个原生对象完成 | 首次跨两轮八卡租约；恢复1157对象SHA不变，只补37 |
+| 新环境总入口复跑 | prepare/build/eight-smoke累计两次rc=0 | 完整层数，但仅22帧、256×256、2步请求；复跑1194对象SHA不变 |
 
-## 推送前
+新环境短推理摘要及实测脚本指纹见[结构化记录](results/h3_reproduction_20261108.json)，历史官方结果原文见[compare输出](results/h3_official_compare_20261107.txt)。SSIM不是相同像素比例，也不代表音频一致性或所有测试用例已通过。
 
-三个组件属于同一个整合 Git 仓库，远程为 `https://github.com/Heking114514/songshanbei-contest`，当前工作分支为 `codex/eight-card-handover`。本轮提交在该分支保存，不在历史 `submit/` 的三个仓库分别提交。
+**尚未完成：干净环境到双方全新生成完整官方compare的整链验收、最终发布版本的匿名clone实机验收，以及官方换图/换Prompt的通用入口适配。** 本次公开源码和材料不改变这些运行边界。历史约50分钟reference与约9分钟native来自不同运行且计时口径不同，不能相除作为官方加速比。
 
-提交源码、测试、运行入口、统一首帧与复现说明；排除权重、编译产物、Python/pytest 缓存和凭证。`BASELINE.md` 保留原单卡来源，`VERSIONS.md` 记录本轮验证边界；当前提交号通过 `git rev-parse HEAD` 查询。
+## 选择工作流
 
-## 不可修改
+| 用途 | 入口与顺序 |
+|---|---|
+| 算法/接口更新后的单卡自验 | reproduce_h3.sh：prepare→build→jit→smoke；缩层双端推理及禁新JIT复跑 |
+| 八卡快速链路验证 | reproduce_h3_all.sh：prepare→build→eight-smoke；首次允许JIT，生成短视频 |
+| 八卡正式提交 | prepare→build→source新环境→来源审计/八卡检查→run_h3_compare.sh；完整双方新生成 |
 
-- 模型权重、测试数据、隐藏用例；
-- `InfiniLM/examples/minimax_h3_compare.py`；
-- 评测程序和基线；
-- 不得用预计算结果或外部在线服务替代推理。
+正式八卡直接流程的完整载荷在REPRODUCE.md。reproduce_h3.sh的preflight/compare分支保留真实single-ready门禁，属于先单卡后八卡的另一流程；不要伪造回执。短推理成功不等于正式compare通过。
 
-## 当前验证状态与下一步
+## 源码、依赖和输入
 
-- 已完成：H3原生构建；1194对象跨租约零重编、单文件增量验证；单卡接口修复；运行包换目录零JIT恢复；八卡22帧冒烟；完整模型TP8正式124帧/50步请求生成与媒体回收校验。
-- 正式配置：统一图片、A dog falls asleep、seed42、默认分辨率768×928、24fps、math_bf16。原生正式视频证据见 `../handover/results/h3-formal-20261107T0956/`。
-- 未完成：legacy完整参考生成、官方SSIM/差异比较、全模型参考数值对齐。已跑compare返回2，参考进程在导入设备层失败，没有开始加载模型。
-- 下一次使用健康八卡会话，先直接HIP/Torch/逐卡计算预检，再用未修改官方compare补跑参考。平台Active不能替代GPU实测。
-- 当前资产直接恢复即可，不需要重编或pip。首次源码构建入口 `scripts/build_and_compare_h3.sh` 使用-j120；该新wrapper只经过本地检查，尚未新租约端到端验收。
-- `scripts/run_h3_compare.sh`统一BF16 math配置和预检。resume可通过官方provided参数复用native视频，但该侧本轮性能为n/a；正式性能用full重新生成双方。
-- `scripts/run_h3_smoke.sh`已改为22帧/256×256/2步，仅短冒烟启用时长override，正式compare不启用。
-- 所有命令仅Git Bash执行、完整脚本整体base64。AFS用量只查专门API，保留4GiB上限与容量余量。
+- InfiniCore/、InfiniLM/、ninetoothed/属于同一个Git仓库。
+- requirements/锁定55个CPython3.11/Linux wheel的版本、URL、大小和SHA；平台Torch由赛事基础环境提供，不安装PyPI Torch。
+- third_party/h3/随附HCU FlagTree、clang/lld和xmake源码包，均有来源、SHA与许可。H3原生库、模型权重和旧JIT缓存不随包发布。
+- 当前模板输入为inputs/first_frame.png、Prompt A dog falls asleep、seed42。图片/官方脚本的固定SHA和compare的Prompt常量仍需按官方新用例适配；仅换FIRST_FRAME路径会被现有预检拒绝。
 
-代码边界见 `../八卡阶段代码边界与改造审计.md`。实时进展见 `../handover/接手进展.md`。
+目标平台：赛事海光Linux x86_64、CPython3.11、平台Torch2.9.0/HIP6.3、gfx936、DTK /opt/dtk。MODEL_PATH默认指向共享MiniMax-H3官方权重，评审可指定等价目录。BF16 math SDPA与reference每批4个独立attention head的调度需在报告披露，原版compare保持不变。
+
+所有本地和派发命令统一指定Git Bash完整可执行路径，整段Bash载荷先base64；禁止PowerShell/pwsh、cmd、WSL及裸bash.exe别名。已有构建保持相同源码/work路径增量，不clean；日志实时tee、每30秒心跳。AFS上限4GiB，只查专门接口，按新鲜完整统计和峰值预算保存；节点环境和共享权重不能未经预算整份复制到AFS。
+
+仓库：[songshanbei-contest](https://github.com/Heking114514/songshanbei-contest)，分支codex/eight-card-handover。复现时固定包含本文的完整40位commit（git rev-parse HEAD）；旧8344881只作历史基线，不包含本次新增入口与固定资产。
