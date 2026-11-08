@@ -1,54 +1,55 @@
-# 源码、交付包与运行环境的位置
+# 源码、离线依赖与运行环境的位置
 
-更新时间：2026-11-08T23:32:04+08:00（北京时间）。
+更新时间：2026-11-09T00:45:35+08:00（北京时间）。
 
-运行步骤见 [README](README.md)，从源码制包见 [PACKAGING.md](PACKAGING.md)。
+上传、启动和取结果见 [README](README.md)，获取依赖见 [PACKAGING.md](PACKAGING.md)。
 
-## 先分清：源码、交付包、运行环境
+## AFS 上放什么
 
-`h3-submission/` 是打包命令生成的目录，名字来自 `--output ../h3-submission`。仓库克隆下来时没有这个目录；[制包说明](PACKAGING.md)中的命令会创建它。
+| 位置 | 内容 | 如何准备 |
+|---|---|---|
+| `个人AFS/songshanbei-contest/` | 本仓库源码、脚本、三份工具、输入图及参考视频 | 上传源码仓库 |
+| `个人AFS/songshanbei-contest/offline-wheels/` | 55 个尚未安装的普通 wheel | 下载后原名放入 |
+| `个人AFS/storage-info.json` | 最新完整容量统计 | 资源就绪后导出并上传 |
+| `个人AFS/h3-results/` | 视频、日志和比较结果 | 运行结束由脚本保存 |
 
-| 东西 | 放在哪里 | 包含什么 | 何时创建 |
-|---|---|---|---|
-| 源码仓库 | 你克隆仓库的目录 | InfiniCore、InfiniLM、脚本、依赖清单、三份工具、图片和参考视频 | 克隆仓库时 |
-| 离线wheel文件夹 | 仓库同级 `h3-wheelhouse/` | 55个尚未安装的Python依赖文件 | 下载或放入依赖时 |
-| 上传交付包 | 仓库同级 `h3-submission/`，然后上传至AFS同名目录 | 压缩后的源码、依赖、工具，以及启动脚本、清单和参考视频 | 运行打包命令时 |
-| 已安装的运行环境 | 八卡节点 `$H3_NODE_ROOT/work/` | Python环境、安装后的依赖、工具和原生库 | 运行正式脚本时 |
-| 最终结果 | AFS `$H3_AFS_OUTPUT_DIR/` | 视频、日志及校验结果 | 推理结束保存时 |
+AFS 中的源码和 wheel 是安装输入。实际 Python 环境、编译对象和 JIT 缓存由脚本在节点盘创建，避免占用个人 AFS。
 
-正式操作分为两处：**在源码仓库中制作交付包；在AFS交付包目录中启动推理。** 仓库内的 `run_submission.sh` 会随打包一起复制出去，启动时需要同目录下的 `delivery-manifest.json` 和 `payload.part*`。
+## 节点上的环境结构
 
-## 整个环境在节点上是什么结构
-
-安装好的环境由脚本在八卡节点创建。`H3_NODE_ROOT` 是你在启动命令中设置的节点工程根目录，其下结构为：
+`H3_NODE_ROOT` 是启动时指定的节点目录，必须位于个人 AFS 和受限的 `workspace` 目录之外。在新八卡 Bash 的初始工作目录中，`$(dirname "$PWD")/h3-native` 表示初始目录的同级目录。
 
 ~~~text
-$H3_NODE_ROOT/                       # 八卡节点上的工程目录
-├── source/                         # 自动解压的源码
-│   ├── InfiniCore/                 # Core源码及构建文件
-│   ├── InfiniLM/                   # H3源码及构建文件
+$H3_NODE_ROOT/
+├── source-stage.json               # 上传源码的同步与校验记录
+├── source/                         # 从AFS复制的源码
+│   ├── InfiniCore/                 # Core源码及此节点的编译产物
+│   ├── InfiniLM/                   # H3源码及此节点的编译产物
 │   ├── ninetoothed/
 │   └── scripts/
-├── wheelhouse/                     # 自动解压的55个原始wheel
-├── work/                           # 实际运行环境，脚本自动安装和加载
-│   ├── venv/bin/python3            # 本工程使用的Python入口
-│   ├── python/                    # 安装后的Python依赖和FlagTree
-│   ├── install/                   # 编译安装的InfiniCore/InfiniLM原生库
+├── work/                           # 实际环境，脚本自动安装和加载
+│   ├── venv/bin/python3            # 本工程的Python入口
+│   ├── python/                    # 安装后的55个依赖及FlagTree
+│   ├── install/                   # InfiniCore/InfiniLM原生库
 │   ├── toolchain/                 # clang/lld工具链
 │   ├── xmake/                     # xmake构建工具
-│   ├── downloads/                 # 核验后的离线wheel副本
+│   ├── downloads/                 # 从AFS复制并核验的离线wheel
 │   ├── config/                    # 增量构建配置
 │   ├── jit/                       # 推理时生成的JIT缓存
 │   └── prepared.json              # 环境准备完成记录
 └── runs/
-    └── native-时间戳-进程号/        # check模式则为check-时间戳-进程号
+    └── native-时间戳-进程号/        # check模式使用check前缀
         ├── result.mp4
         ├── generation.log
         └── workflow.log
 ~~~
 
-Python3.11和Torch2.9.0由平台 `/usr/local/` 提供，DTK由 `/opt/dtk/` 提供；脚本在此基础上安装本工程依赖。模型权重从 `MODEL_PATH` 指定的共享目录只读加载。
+Python 3.11 和 Torch 2.9.0/HIP 6.3 由平台 `/usr/local/` 提供，DTK/gfx936 工具由 `/opt/dtk/` 提供。脚本在此基础上创建 Python 入口，将依赖安装到 `work/python/`，将编译后的原生库安装到 `work/install/`。模型从 `MODEL_PATH` 指向的共享目录只读加载。
 
-例如将 `H3_NODE_ROOT` 设置为 `/节点私有目录/h3-submission-native`，实际Python入口就是 `/节点私有目录/h3-submission-native/work/venv/bin/python3`，安装后的依赖就在同级 `work/python/`。脚本自动配置并使用它们，无需另行激活环境。
+例如 `H3_NODE_ROOT=/节点私有目录/h3-native`，Python 入口就是 `/节点私有目录/h3-native/work/venv/bin/python3`。脚本自动设置其搜索路径和原生库路径，无需手工激活环境。
 
-节点上的环境和编译产物随节点资源回收；AFS中的上传包和已保存结果长期保留。同一节点、相同交付包重试时，保留同一个 `H3_NODE_ROOT` 可复用环境和增量编译产物。新节点可使用AFS上传包重新安装和构建。
+## 什么时候能复用
+
+同一节点和同一 AFS 源码目录重试时，保留 `H3_NODE_ROOT`。入口按内容校验，未变化的源码不重写；环境和编译产物留在原位置，源码更新交由构建系统增量处理。旧编译目录不会从上传源码中带入。
+
+节点资源回收后，上述节点目录随之回收。AFS 中上传的源码、wheel 和已保存结果继续保留；新节点重新安装和构建。

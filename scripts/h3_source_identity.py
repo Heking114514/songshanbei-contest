@@ -24,7 +24,7 @@ def source_identity(root):
                 raise RuntimeError("Exported source missing/unsafe: " + row["path"])
             if p.stat().st_size != row["size"] or digest(p) != row["sha256"]:
                 raise RuntimeError("Exported source changed: " + row["path"])
-        return dict(kind="exported_worktree", git_head=data["git_head"],
+        return dict(kind=data.get("kind", "exported_worktree"), git_head=data["git_head"],
                     git_status=data["git_status"], manifest_sha256=digest(manifest),
                     file_count=len(data["files"]))
     return dict(kind="git_checkout",

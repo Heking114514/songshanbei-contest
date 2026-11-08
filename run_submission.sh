@@ -16,7 +16,9 @@ esac
 : "${H3_NODE_ROOT:?Set node storage outside AFS and workspace; see REPRODUCE.md}"
 export H3_BASE_PYTHON="${H3_BASE_PYTHON:-/usr/local/bin/python3}"
 export H3_DELIVERY_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_DELIVERY_DIR/offline-wheels}"
 export H3_NODE_ROOT
 H3_NODE_ROOT="$(env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u \
-    "$H3_DELIVERY_DIR/scripts/h3_delivery.py" stage --package "$H3_DELIVERY_DIR" --node "$H3_NODE_ROOT")"
+    "$H3_DELIVERY_DIR/scripts/h3_source_stage.py" --source "$H3_DELIVERY_DIR" \
+    --wheelhouse "$H3_WHEELHOUSE" --node "$H3_NODE_ROOT")"
 exec bash --noprofile --norc "$H3_NODE_ROOT/source/scripts/h3_submission_common.sh" "$mode"

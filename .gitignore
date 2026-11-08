@@ -16,3 +16,7 @@ __pycache__/
 /.h3-development/
 
 /.h3-submission/
+
+# Release wheels are placed here after downloading.
+/offline-wheels/*
+!/offline-wheels/README.md

@@ -78,7 +78,7 @@ def begin():
         provided_reference=verify_reference() if os.environ["H3_SUBMISSION_MODE"] == "check" else None,
         native_path=os.environ["H3_NATIVE_VIDEO"], compare_dir=os.environ["OUTPUT_DIR"],
         source_files=[fingerprint(root / name) for name in (
-            "run_submission.sh", "scripts/h3_submission_common.sh",
+            "run_submission.sh", "scripts/h3_source_stage.py", "scripts/h3_submission_common.sh",
             "scripts/run_h3_compare.sh", "scripts/h3_preflight.py",
             "scripts/h3_submission_record.py", "scripts/h3_delivery.py",
             "scripts/h3_compare_hook/sitecustomize.py", "scripts/h3_reference_sdpa.py",

@@ -5,6 +5,7 @@
 /scripts/h3_compare_hook/*.py text eol=lf
 /tests/test_h3_bootstrap.py text eol=lf
 /tests/test_h3_workflows.py text eol=lf
+/tests/test_h3_source_stage.py text eol=lf
 /requirements/*.txt text eol=lf
 /third_party/h3/*.py text eol=lf
 /third_party/h3/*.whl binary

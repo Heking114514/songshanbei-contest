@@ -1,35 +1,23 @@
-# 从源码制作上传交付包
+# 离线 wheel 的准备与发布
 
-更新时间：2026-11-08T23:32:04+08:00（北京时间）。
+更新时间：2026-11-09T00:45:35+08:00（北京时间）。
 
-本文供制作交付包的人使用。运行者拿到交付目录后，按照 [README](README.md) 上传和运行即可。
+正式运行直接使用本仓库源码和 `offline-wheels/` 中的依赖，放置和启动方法见 [README](README.md)。
 
-## 准备依赖并打包
+## 哪些文件需要另外提供
 
-进入克隆得到的源码仓库，即能看到 `run_submission.sh`、`InfiniCore/` 和 `InfiniLM/` 的目录，再执行本节命令。这里将创建原先不存在的 `h3-wheelhouse/` 和 `h3-submission/`。若已收到制作好的交付包，可直接按README上传并运行。制包电脑需要 Python 3.11 或更新版本。
+| 文件 | 数量与大小 | 分发位置 |
+|---|---|---|
+| 普通 Python wheel | 55 个，192,118,057 字节（约183MiB） | 配套下载资产；当前尚未发布 Release |
+| HCU FlagTree、最小 clang/lld、xmake | 3 份工具，约143MiB | 已在本仓库 `third_party/h3/` |
+| 源码、输入图和参考视频 | 见仓库目录 | 已在本仓库 |
+| Torch、DTK、共享模型权重 | 由赛事平台提供 | 使用平台现有环境与共享路径 |
 
-55个 Python wheel 放在仓库同级的 `h3-wheelhouse/` 中，直接放文件，不再套一层目录；文件名、大小和 SHA256 必须符合 `requirements/h3_linux_cp311.lock.json`。三份构建工具已经随源码放在 `third_party/h3/`。
+只有 55 个普通 wheel 需要另行准备。保持文件原名，直接放在仓库根目录的 `offline-wheels/` 中。`requirements/h3_linux_cp311.lock.json` 记录每个文件的名称、版本、下载地址、字节数和 SHA256。
 
-~~~text
-工作目录/
-├── 源码仓库/                       # 你克隆的目录，名称以实际为准
-│   ├── run_submission.sh
-│   ├── scripts/
-│   ├── requirements/h3_linux_cp311.lock.json
-│   ├── third_party/h3/
-│   │   ├── flagtree-0.7.0+hcu3.6-cp311-cp311-linux_x86_64.whl
-│   │   ├── hcu-jit-clang18-minimal.tar.gz
-│   │   └── xmake-v3.0.3.gz.run
-│   ├── inputs/first_frame.png
-│   └── reference/
-│       ├── reference_fl2va.mp4
-│       ├── case.json
-│       └── README.md
-├── h3-wheelhouse/                   # 55个锁定wheel，约183MiB
-└── h3-submission/                   # 下一条打包命令生成
-~~~
+## 当前获取方法
 
-已有55个wheel时直接放入 `../h3-wheelhouse/`。需要下载时，下面的命令按依赖锁中的地址下载并核验；再次运行会复用已通过校验的文件：
+当前还没有可用的配套 Release 下载入口。可以在联网电脑进入仓库根目录，使用 Python 3.11 或更新版本，按锁定清单下载全部 wheel：
 
 ~~~bash
 python - <<'WHEELS'
@@ -40,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, "scripts")
 from h3_bootstrap import fetch
 
-wheelhouse = Path("../h3-wheelhouse")
+wheelhouse = Path("offline-wheels")
 wheelhouse.mkdir(parents=True, exist_ok=True)
 lock = json.loads(Path("requirements/h3_linux_cp311.lock.json").read_text())
 for wheel in lock["wheels"]:
@@ -49,18 +37,30 @@ print("离线wheel准备完成：", wheelhouse.resolve())
 WHEELS
 ~~~
 
-在同一仓库根目录制作交付包：
+这只下载文件，既不在本机安装 Linux wheel，也不编译。再次执行会复用通过校验的文件。下载完后，把源码和这个目录一起上传到 AFS；也可以先上传源码，再把 wheel 放到对应目录。
+
+已有 wheel 时，用下面的命令只做核验：
 
 ~~~bash
-python scripts/h3_delivery.py package \
-  --repo . \
-  --wheelhouse ../h3-wheelhouse \
-  --output ../h3-submission
+python - <<'VERIFY'
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from h3_bootstrap import verified, verify_assets
+
+verify_assets()
+rows = json.loads(Path("requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
+bad = [r["filename"] for r in rows if not verified(Path("offline-wheels") / r["filename"], r)]
+if bad:
+    raise SystemExit("缺失或校验失败：\n" + "\n".join(bad))
+print("55个wheel及3份工具校验通过")
+VERIFY
 ~~~
 
-`../h3-submission` 必须是尚不存在的新目录。命令会校验依赖，合并源码和离线wheel，生成最多96MiB一片的 `payload.part*`，以及上传清单 `UPLOAD.md` 和校验清单 `delivery-manifest.json`。
+## 维护者发布 Release
 
-生成的交付目录已包含运行所需的源码、55个wheel和三份构建工具；上传时不必另传 `h3-wheelhouse/`。模型权重使用平台共享目录，不放进交付包。
+发布时，将锁定清单对应的 55 个 wheel 作为 Release 资产上传，保持原名和原始字节；源码、工具和参考视频继续由仓库提供。发布前核对文件数量、总字节数及逐文件 SHA256，并确认下载后的文件能够通过上述核验。
 
-
-打包完成后，将生成的整个目录提供给运行者。目录名由 --output 参数决定；本文统一使用 h3-submission。
+Release 发布完成后，在 README 中补充真实发布页和下载命令。当前文档不提供未发布的下载地址。`offline-wheels/` 中的二进制不进入 Git 历史。

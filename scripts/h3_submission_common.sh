@@ -7,6 +7,7 @@ case "$mode" in native|check) ;; *) exit 64;; esac
 TOOLS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export H3_SOURCE_ROOT="$(cd "$TOOLS/.." && pwd)"
 export H3_REPRO_WORK="$H3_NODE_ROOT/work"
+export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_DELIVERY_DIR/offline-wheels}"
 export BUILD_JOBS="${BUILD_JOBS:-120}"
 export FIRST_FRAME="${FIRST_FRAME:-$H3_SOURCE_ROOT/inputs/first_frame.png}"
 export H3_EXPECTED_GPUS=8 H3_FORBID_JIT_COMPILATION=0 H3_GPU_CHECK_MODE=inventory
@@ -47,7 +48,7 @@ worker() (
     trap 'kill "$heart" 2>/dev/null || true; wait "$heart" 2>/dev/null || true' EXIT
     printf '[%s] H3_FORMAL_BEGIN mode=%s jobs=%s\n' "$(date -u +%FT%TZ)" "$mode" "$BUILD_JOBS"
     env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u "$TOOLS/h3_bootstrap.py" \
-        stage-wheels --work "$H3_REPRO_WORK" --wheelhouse "$H3_NODE_ROOT/wheelhouse"
+        stage-wheels --work "$H3_REPRO_WORK" --wheelhouse "$H3_WHEELHOUSE"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" prepare
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" build
     source "$TOOLS/h3_repro_env.sh"
