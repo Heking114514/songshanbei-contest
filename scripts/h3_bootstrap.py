@@ -17,6 +17,8 @@ import tarfile
 import time
 from urllib.request import urlopen
 
+from h3_source_identity import source_identity
+
 REPO = Path(__file__).resolve().parents[1]
 LOCK = REPO / "requirements/h3_linux_cp311.lock.json"
 ASSETS = REPO / "third_party/h3/manifest.json"
@@ -288,16 +290,15 @@ def audit(work, output):
             libraries[str(path)] = digest(path)
     if not libraries:
         raise RuntimeError("No native H3 libraries found in process mappings")
-    head = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
-    changed = subprocess.check_output(["git", "-C", str(REPO), "status", "--porcelain",
-                                       "--untracked-files=normal"], text=True)
+    identity = source_identity(REPO)
     provenance = {str(p.relative_to(REPO)): digest(p) for p in
                   [*sorted((REPO / "scripts").glob("h3_*")), REPO / "scripts/reproduce_h3.sh",
                    REPO / "scripts/build_hygon.sh", REPO / "scripts/run_h3_compare.sh",
                    REPO / "InfiniLM/examples/minimax_h3_compare.py",
                    REPO / "inputs/first_frame.png"] if p.is_file()}
     atomic_json(output, dict(passed=True, time=time.time(), source_root=str(REPO),
-                             head=head, worktree_status=changed, source_sha256=provenance,
+                             head=identity["git_head"], worktree_status=identity["git_status"],
+                             source_identity=identity, source_sha256=provenance,
                              modules=modules, native=native, loaded_libraries=libraries,
                              lock_sha256=digest(LOCK), assets_sha256=digest(ASSETS),
                              python_include=sysconfig.get_path("include")))
@@ -325,6 +326,27 @@ def rebase_cache(work):
     print("H3_JIT_GROUPS_REBASED", len(updates), flush=True)
 
 
+
+def stage_wheels(work, wheelhouse):
+    """Stage offline wheels after validating the complete locked set."""
+    work = check_node_path(work, os.environ.get("IFAB_AFS_HOME"))
+    wheelhouse = Path(wheelhouse).resolve()
+    rows = json.loads((REPO / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
+    dest = work / "downloads"
+    for row in rows:
+        if not verified(dest / row["filename"], row) and not verified(wheelhouse / row["filename"], row):
+            raise RuntimeError("Missing/corrupt offline wheel: " + row["filename"])
+    dest.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        target = dest / row["filename"]
+        if not verified(target, row):
+            partial = target.with_suffix(target.suffix + ".offline-partial")
+            shutil.copy2(wheelhouse / row["filename"], partial)
+            if not verified(partial, row):
+                raise RuntimeError("Offline wheel copy SHA mismatch: " + row["filename"])
+            partial.replace(target)
+        print("WHEEL_OFFLINE_SHA_OK", target.name, flush=True)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -332,6 +354,9 @@ def main():
     for name in ("validate-work", "rebase-cache"):
         p = sub.add_parser(name)
         p.add_argument("--work", required=True, type=Path)
+    p = sub.add_parser("stage-wheels")
+    p.add_argument("--work", required=True, type=Path)
+    p.add_argument("--wheelhouse", required=True, type=Path)
     p = sub.add_parser("prepare")
     p.add_argument("--work", required=True, type=Path)
     p = sub.add_parser("config-key")
@@ -346,6 +371,8 @@ def main():
         rebase_cache(args.work)
     elif args.command == "verify-assets":
         verify_assets()
+    elif args.command == "stage-wheels":
+        stage_wheels(args.work, args.wheelhouse)
     elif args.command == "prepare":
         prepare(args.work)
     elif args.command == "config-key":

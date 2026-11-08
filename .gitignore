@@ -12,3 +12,7 @@ __pycache__/
 
 # Fresh-clone reproduction environment, downloads, JIT, logs
 /.h3-reproduction/
+
+/.h3-development/
+
+/.h3-submission/

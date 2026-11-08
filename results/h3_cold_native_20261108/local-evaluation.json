@@ -1,0 +1,40 @@
+{
+  "state": "complete",
+  "official_returncode": 0,
+  "size_pass": true,
+  "length_pass": true,
+  "average_ssim_percent": 96.819,
+  "metric": "Unmodified official grayscale <=512px SSIM",
+  "native": {
+    "path": "D:\\Desktop\\songshan workspace\\handover\\results\\h3_cold_native_20261108\\evidence\\result.mp4",
+    "bytes": 1539607,
+    "sha256": "cb104f03668a1a5ce0c3c51e858d1a7b43f6bcf10ee3fc76007c47aabf7937bd"
+  },
+  "reference": {
+    "path": "D:\\Desktop\\songshan workspace\\submit_repo\\reference\\reference_fl2va.mp4",
+    "bytes": 1554000,
+    "sha256": "1ca2e40a53b85479d3e9e06a2644801fc91324ba71c197ba484f1d33ee05056b"
+  },
+  "native_media": {
+    "width": 768,
+    "height": 928,
+    "fps": "24",
+    "audio_streams": 1,
+    "frames": 124
+  },
+  "reference_media": {
+    "width": 768,
+    "height": 928,
+    "fps": "24",
+    "audio_streams": 1,
+    "frames": 124
+  },
+  "reference_is_historical": true,
+  "same_run_speedup": null,
+  "audio_quality_evaluated": false,
+  "official_log": {
+    "path": "D:\\Desktop\\songshan workspace\\handover\\results\\h3_cold_native_20261108\\local_compare\\official-comparison.log",
+    "bytes": 490,
+    "sha256": "6c2ed1d430c8bfa22586cc74a7e1b06cd7c901a42c7a2e03358f4a661c40d5ae"
+  }
+}

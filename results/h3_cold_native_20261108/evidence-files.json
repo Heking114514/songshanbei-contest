@@ -1,0 +1,78 @@
+{
+  "copied_at": "2026-11-08T22:45:35+08:00",
+  "source_directory": "handover/results/h3_cold_native_20261108",
+  "files": [
+    {
+      "path": "acceptance-summary.json",
+      "bytes": 4250,
+      "sha256": "dadeca5b0c0f251b24a4ab998c5a37ed8838c69e23fe4552d3153feb01840de8",
+      "source": "acceptance-summary.json"
+    },
+    {
+      "path": "first-entry-failure.log",
+      "bytes": 1152,
+      "sha256": "78d0d7128809eeabd7a2d7cd144a0a3c0bb4c22afd10ed8d1cce8e55b7e3b88d",
+      "source": "first-entry-failure.log"
+    },
+    {
+      "path": "entry-exit.txt",
+      "bytes": 21,
+      "sha256": "3a984ea7b4857a701e9f557edad28360c62f0920a4e26ef2b156bb2f3e38ec75",
+      "source": "entry-exit.txt"
+    },
+    {
+      "path": "upload-ready.json",
+      "bytes": 1484,
+      "sha256": "7bb9c105ca52cfbae2324de81f1c06b0177c505fd4300b772829156c5544bae8",
+      "source": "upload-ready.json"
+    },
+    {
+      "path": "result.mp4",
+      "bytes": 1539607,
+      "sha256": "cb104f03668a1a5ce0c3c51e858d1a7b43f6bcf10ee3fc76007c47aabf7937bd",
+      "source": "evidence/result.mp4"
+    },
+    {
+      "path": "generation.log",
+      "bytes": 15015,
+      "sha256": "38e1393acbbdcc8ee3b5e87487e04654b6c47df179cebc266fb856b805948903",
+      "source": "evidence/generation.log"
+    },
+    {
+      "path": "invocation.json",
+      "bytes": 5172,
+      "sha256": "6111ebb439b191d84119c07f32799304fcae27660f2a9de56700a00d0abc2de2",
+      "source": "evidence/invocation.json"
+    },
+    {
+      "path": "native-check.json",
+      "bytes": 447,
+      "sha256": "95eee9974fe52d2f44a4e930155dac0085eb37ce921ae9112afbbe0b86564bc5",
+      "source": "evidence/native-check.json"
+    },
+    {
+      "path": "submission-status.json",
+      "bytes": 317,
+      "sha256": "fd545222a86340b280232678d6da2b682ba7cfd09826794051583327b978a851",
+      "source": "evidence/submission-status.json"
+    },
+    {
+      "path": "saved-manifest.json",
+      "bytes": 1476,
+      "sha256": "ed26978a01b63b808e3f6d33548d9337d165b19a30ddec98e8ac4f8cb456ce5e",
+      "source": "evidence/saved-manifest.json"
+    },
+    {
+      "path": "official-comparison.log",
+      "bytes": 490,
+      "sha256": "6c2ed1d430c8bfa22586cc74a7e1b06cd7c901a42c7a2e03358f4a661c40d5ae",
+      "source": "local_compare/official-comparison.log"
+    },
+    {
+      "path": "local-evaluation.json",
+      "bytes": 1281,
+      "sha256": "40586e8cb6af3a597ae7f0aaac4bbb6116d955b76744e57e94e8c9eef9ec7fc3",
+      "source": "local_compare/evaluation.json"
+    }
+  ]
+}

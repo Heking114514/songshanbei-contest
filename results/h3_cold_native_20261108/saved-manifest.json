@@ -1,0 +1,53 @@
+{
+  "state": "saved",
+  "pipeline_rc": 0,
+  "saved_at": "2026-11-08T14:10:24.692090+00:00",
+  "files": [
+    {
+      "path": "afs-reservation.json",
+      "size": 382,
+      "sha256": "d85f395dec3fc082ed8fbc7005a132dcce851556a82c291b9a08ec01f14b1b0f"
+    },
+    {
+      "path": "generation.log",
+      "size": 15015,
+      "sha256": "38e1393acbbdcc8ee3b5e87487e04654b6c47df179cebc266fb856b805948903"
+    },
+    {
+      "path": "invocation.json",
+      "size": 5172,
+      "sha256": "6111ebb439b191d84119c07f32799304fcae27660f2a9de56700a00d0abc2de2"
+    },
+    {
+      "path": "native-check.json",
+      "size": 447,
+      "sha256": "95eee9974fe52d2f44a4e930155dac0085eb37ce921ae9112afbbe0b86564bc5"
+    },
+    {
+      "path": "origins.json",
+      "size": 7329,
+      "sha256": "d8ff0795f5c43454ceaff4237977096c08f2d0c3f96fb115423c8035583c5e9d"
+    },
+    {
+      "path": "preflight.json",
+      "size": 3682,
+      "sha256": "fe85b71f744711f931d9ecc34a0675798813a65234a34d485339fd9ffe9f97d7"
+    },
+    {
+      "path": "result.mp4",
+      "size": 1539607,
+      "sha256": "cb104f03668a1a5ce0c3c51e858d1a7b43f6bcf10ee3fc76007c47aabf7937bd"
+    },
+    {
+      "path": "submission-status.json",
+      "size": 317,
+      "sha256": "fd545222a86340b280232678d6da2b682ba7cfd09826794051583327b978a851"
+    },
+    {
+      "path": "workflow.log",
+      "size": 1345353,
+      "sha256": "493367662df0f40d49623a17160fd49d67edab303238a269c80817bdae2bb55d"
+    }
+  ],
+  "bytes": 2917304
+}

@@ -1,0 +1,55 @@
+{
+  "state": "all_files_verified",
+  "files": 13,
+  "bytes": 357530853,
+  "at": "2026-11-08T21:15:04+08:00",
+  "storage": {
+    "owner": "tree",
+    "bytes": 4294967296,
+    "mode": "afs",
+    "revision": 0,
+    "path": "/public/home/aclsylqidf/infinifabric-users/users/2cc72669b8cc4814b904dca9ba192cbd",
+    "scope": "d1d9c056c1ef4566a7a9a38df38fb56a",
+    "enforcement": "soft",
+    "backend": "AFS / NFS",
+    "shared_read_directories": [
+      "/public/home/aclsylqidf/shared"
+    ],
+    "usage": {
+      "bytes": 357530853,
+      "trash_bytes": 0,
+      "entries": 16,
+      "complete": true,
+      "sampled_at": 1794143703.2492282,
+      "baseline_at": 1794143703.2492282,
+      "accounted_at": 1794143703.2492282,
+      "state": "Complete",
+      "reason": null,
+      "checkpoint": 0,
+      "over_quota": false
+    },
+    "transfer_file_bytes": 134217728,
+    "chunk_bytes": 65536,
+    "features": {
+      "directory_upload": 1,
+      "directory_upload_limits": {
+        "max_depth": 16,
+        "max_files": 10000,
+        "path_bytes": 1024,
+        "name_bytes": 255
+      },
+      "recycle_bin": 1,
+      "recursive_directory_trash": 1,
+      "usage_progress": 2,
+      "usage_accounting": 1
+    },
+    "pending_uploads": [],
+    "receipt_acknowledged": [
+      "7a9b32a7581e476a9aa25f9802de31b2"
+    ],
+    "http_block_bytes": 262144,
+    "ready": true,
+    "can_write": true,
+    "quota_enforcement": "soft"
+  }
+}

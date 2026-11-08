@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "first_frame_sha256": "b97c3487ca35da0c803fba3787cf2b7f936d3d4595548ae5b7b576c19934be54",
+  "prompt": "A dog falls asleep",
+  "seed": 42,
+  "requested_steps": 50,
+  "num_frames": 124,
+  "official_compare_sha256_lf": "24f3439e11e98d979ec8cee5f76284079dad87cb4668cf0f109b7904e8641bc3",
+  "reference_sha256": "1ca2e40a53b85479d3e9e06a2644801fc91324ba71c197ba484f1d33ee05056b",
+  "reference_bytes": 1554000,
+  "media": {
+    "width": 768,
+    "height": 928,
+    "fps": 24,
+    "frames": 124,
+    "audio_streams": 1
+  },
+  "source_run": "h3-submit-20261107T123015Z-d830f6",
+  "runtime": {
+    "attention": "math_bf16",
+    "reference_max_heads": 4
+  },
+  "note": "Historical full reference; generated once using the official legacy backend. Reused for this case only."
+}

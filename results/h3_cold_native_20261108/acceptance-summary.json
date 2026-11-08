@@ -1,0 +1,115 @@
+{
+  "state": "complete",
+  "at": "2026-11-08T22:24:06+08:00",
+  "workflow": "empty AFS -> verified delivery upload -> new exclusive eight-card Bash -> fresh environment -> -j120 native build -> full native video -> AFS persistence -> local official provided-video comparison",
+  "initial_path_failure": "PermissionError13 at /tmp/h3-submission-230029; fixed via supported explicit H3_NODE_ROOT; first entry rc=1",
+  "archive_sha256": "323deb1f69fb02bd2d843c75de05842d2b074f50075d6ca7ea46115553744bf5",
+  "source_manifest_sha256": "002028b42138eab0e0e2161f93ec9a98dfbab458befcab332766c3287968fdc5",
+  "prepare_rc": 0,
+  "build_rc": 0,
+  "pipeline_rc": 0,
+  "save_rc": 0,
+  "smoke_executed": false,
+  "check_on_server": false,
+  "full_layers": true,
+  "requested_steps": 50,
+  "actual_dit_calls": 49,
+  "num_frames": 124,
+  "native": {
+    "path": "D:\\Desktop\\songshan workspace\\handover\\results\\h3_cold_native_20261108\\evidence\\result.mp4",
+    "bytes": 1539607,
+    "sha256": "cb104f03668a1a5ce0c3c51e858d1a7b43f6bcf10ee3fc76007c47aabf7937bd"
+  },
+  "native_media": {
+    "width": 768,
+    "height": 928,
+    "fps": "24",
+    "audio_streams": 1,
+    "frames": 124
+  },
+  "timings": {
+    "model.pipeline_create": 0.543,
+    "model.condition_encoder_create_and_load": 40.923,
+    "model.transformer_create_and_load": 22.901,
+    "model.remaining_components_create_and_load": 12.215,
+    "input.files_and_references": 0.37,
+    "input.arguments": 0.0,
+    "compute.condition_encoder": 5.943,
+    "input.video_vae_encode": 2.005,
+    "input.audio_vae_encode": 0.0,
+    "compute.h3_transformer": 433.297,
+    "output.video_vae_decode": 29.794,
+    "output.audio_vae_decode": 9.697,
+    "generation.pipeline_total": 484.989,
+    "output.media_encode": 1.828,
+    "total.end_to_end": 563.771,
+    "pipeline.other_preprocess_scheduler": 4.253
+  },
+  "compare": {
+    "state": "complete",
+    "official_returncode": 0,
+    "size_pass": true,
+    "length_pass": true,
+    "average_ssim_percent": 96.819,
+    "metric": "Unmodified official grayscale <=512px SSIM",
+    "native": {
+      "path": "D:\\Desktop\\songshan workspace\\handover\\results\\h3_cold_native_20261108\\evidence\\result.mp4",
+      "bytes": 1539607,
+      "sha256": "cb104f03668a1a5ce0c3c51e858d1a7b43f6bcf10ee3fc76007c47aabf7937bd"
+    },
+    "reference": {
+      "path": "D:\\Desktop\\songshan workspace\\submit_repo\\reference\\reference_fl2va.mp4",
+      "bytes": 1554000,
+      "sha256": "1ca2e40a53b85479d3e9e06a2644801fc91324ba71c197ba484f1d33ee05056b"
+    },
+    "native_media": {
+      "width": 768,
+      "height": 928,
+      "fps": "24",
+      "audio_streams": 1,
+      "frames": 124
+    },
+    "reference_media": {
+      "width": 768,
+      "height": 928,
+      "fps": "24",
+      "audio_streams": 1,
+      "frames": 124
+    },
+    "reference_is_historical": true,
+    "same_run_speedup": null,
+    "audio_quality_evaluated": false,
+    "official_log": {
+      "path": "D:\\Desktop\\songshan workspace\\handover\\results\\h3_cold_native_20261108\\local_compare\\official-comparison.log",
+      "bytes": 490,
+      "sha256": "6c2ed1d430c8bfa22586cc74a7e1b06cd7c901a42c7a2e03358f4a661c40d5ae"
+    }
+  },
+  "objects": 1194,
+  "cache": {
+    "afs_path": "h3-cache/cold-native-20261108/native-source-cache.tar.gz",
+    "bytes": 364064131,
+    "sha256": "48a0ebc44ef366efc3d977fd3f9c79b9b9c4e71e5baa8f6874f1f12c3d04ad38",
+    "cross_node_restore_tested": false
+  },
+  "jit_extra_save": {
+    "state": "not_saved",
+    "reason": "Two terminal/input requests rejected INVALID_TERMINAL_INPUT; seq8 confirmed, exact validation cause unresolved; allocation subsequently expired. Native object cache is saved; first-use JIT is regenerated next node."
+  },
+  "afs": {
+    "bytes": 724845908,
+    "trash_bytes": 0,
+    "entries": 37,
+    "complete": true,
+    "sampled_at": 1794147217.595436,
+    "baseline_at": 1794147217.595436,
+    "accounted_at": 1794147217.595436,
+    "state": "Complete",
+    "reason": null,
+    "checkpoint": 0,
+    "over_quota": false
+  },
+  "allocation_final": "Expired LEASE_DEADLINE",
+  "reference_reused": true,
+  "same_run_speedup": null
+}

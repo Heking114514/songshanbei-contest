@@ -13,6 +13,9 @@ INPUT_SHA = "b97c3487ca35da0c803fba3787cf2b7f936d3d4595548ae5b7b576c19934be54"
 
 
 def gpu_check(expected=None):
+    mode = os.environ.get("H3_GPU_CHECK_MODE", "compute")
+    if mode not in ("compute", "inventory"):
+        raise ValueError("H3_GPU_CHECK_MODE must be compute or inventory")
     expected = int(os.environ.get("H3_EXPECTED_GPUS", "8")) if expected is None else expected
     if expected < 1:
         raise ValueError("Expected GPU count must be positive")
@@ -33,19 +36,20 @@ def gpu_check(expected=None):
     devices = []
     for index in range(expected):
         with torch.cuda.device(index):
-            a = torch.ones((64, 64), device=f"cuda:{index}", dtype=torch.bfloat16)
-            b = a @ a
-            torch.cuda.synchronize(index)
-            if not bool(torch.isfinite(b).all()) or float(b[0, 0]) != 64.0:
-                raise RuntimeError(f"GPU {index} calculation failed")
-            del a, b
-            torch.cuda.empty_cache()
+            if mode == "compute":
+                a = torch.ones((64, 64), device=f"cuda:{index}", dtype=torch.bfloat16)
+                b = a @ a
+                torch.cuda.synchronize(index)
+                if not bool(torch.isfinite(b).all()) or float(b[0, 0]) != 64.0:
+                    raise RuntimeError(f"GPU {index} calculation failed")
+                del a, b
+                torch.cuda.empty_cache()
             free, total = torch.cuda.mem_get_info(index)
             item = dict(index=index, name=torch.cuda.get_device_name(index),
                         free_bytes=free, total_bytes=total)
             devices.append(item)
-            print("GPU_COMPUTE_OK", json.dumps(item), flush=True)
-    return dict(torch=torch.__version__, hip=torch.version.hip, devices=devices)
+            print("GPU_COMPUTE_OK" if mode == "compute" else "GPU_VISIBLE", json.dumps(item), flush=True)
+    return dict(torch=torch.__version__, hip=torch.version.hip, devices=devices, gpu_check_mode=mode)
 
 
 def bf16_math():
@@ -68,6 +72,7 @@ def main():
     parser.add_argument("--first-frame", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--expected-gpus", type=int, default=int(os.environ.get("H3_EXPECTED_GPUS", "8")))
+    parser.add_argument("--input-sha256", default=os.environ.get("H3_INPUT_SHA256", INPUT_SHA))
     args = parser.parse_args()
     result = dict(passed=False, time=time.time(), source_root=str(args.source_root),
                   visible_devices={name: os.environ.get(name) for name in (
@@ -79,8 +84,11 @@ def main():
         digest = hashlib.sha256(official.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
         if digest != COMPARE_SHA:
             raise RuntimeError("Official compare content changed")
-        if hashlib.sha256(args.first_frame.read_bytes()).hexdigest() != INPUT_SHA:
-            raise RuntimeError("Unified input image SHA mismatch")
+        expected_input_sha = args.input_sha256.lower()
+        if len(expected_input_sha) != 64 or any(c not in "0123456789abcdef" for c in expected_input_sha):
+            raise ValueError("Expected input SHA must be 64 hexadecimal characters")
+        if hashlib.sha256(args.first_frame.read_bytes()).hexdigest() != expected_input_sha:
+            raise RuntimeError("Registered input image SHA mismatch")
         for child in ("FL2VA", "diffusers"):
             if not (args.model_path / child).is_dir():
                 raise RuntimeError("Missing shared model directory: " + child)
@@ -110,7 +118,7 @@ def main():
                 if not Path(module.__file__).resolve().is_relative_to(expected_root.resolve()):
                     raise RuntimeError(name + " was imported from a different checkout")
         result.update(passed=True, official_sha256_lf=digest,
-                      input_sha256=INPUT_SHA, attention="math_bf16", packages=versions)
+                      input_sha256=expected_input_sha, attention="math_bf16", packages=versions)
         print("H3_COMPARE_PREFLIGHT_OK", flush=True)
     except BaseException as error:
         result["error"] = repr(error)

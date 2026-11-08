@@ -1,6 +1,6 @@
 # 版本、依赖与验证边界
 
-更新时间：2026-11-08T12:40:52+08:00（北京时间）。
+更新时间：2026-11-08T22:48:17+08:00（北京时间）。
 
 本仓库是三个组件的整合 Git 仓库，分支 codex/eight-card-handover。组件子目录没有独立 .git。以下区分源码来源、历史完整成绩和本提交新增的独立复现入口。运行时以包含本文的完整commit为准；历史执行发生在该版本公开前，不伪造当时的源码身份。
 
@@ -46,7 +46,15 @@ b97c3487ca35da0c803fba3787cf2b7f936d3d4595548ae5b7b576c19934be54。
 
 [第三方 manifest](third_party/h3/manifest.json) 固定 HCU FlagTree0.7.0+hcu3.6（Triton3.6）、clang-18/lld、xmake3.0.3源码包，共149724964字节。FlagTree 来源 commit47970467c4d75a9cfffb84426383c7e7a9f2557a，补丁/许可与来源见 third_party/h3/README.md。H3 原生扩展与 JIT 不在此包内，新环境首次生成。
 
-## 已有运行与本轮检查
+## 最新正式冷启动验收
+
+2026-11-08空AFS、新八卡无旧对象恢复，prepare约7分36秒、-j120冷构建1194对象约22分34秒；完整native端到端563.771秒，pipeline_rc/save_rc均0。本地原版provided compare：Size/Length PASS、SSIM96.819%。首次/tmp权限失败后手动指定节点目录；另有日志观测干预，不是首次无干预成功。
+
+本提交包含正式单入口、离线制包、独立reference及本轮证据，并将H3_NODE_ROOT设为必填。该校验修正仅本地回归，未新节点复验。实际运行源身份以 [本轮证据](results/h3_cold_native_20261108/README.md) 的源码/载荷SHA为准，不能等同后续发布commit。服务器check、换例、本轮缓存跨节点恢复和完整Python/JIT恢复未验收。另一工作线的候选算子不在本提交。
+
+## 历史运行与边界
+
+以下保留此前短推理与历史94.277%完整compare的来源；不得代替上方最新结果。
 
 已有实测：H3 构建/导入，1194对象跨租约零变化、单文件增量，单卡真实双端缩层冒烟，完整 native TP8 124帧/50步生成，完整官方 FL2VA 比较94.277%。正式配置统一图、Prompt A dog falls asleep、seed42、768×928/24fps、math_bf16、reference head_batch4；本轮 reference 新生成、native provided，性能 n/a、无同轮加速比。
 

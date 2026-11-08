@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/pathlib.py", line 1116, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/h3-submission-230029/323deb1f69fb02bd'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/public/home/aclsylqidf/infinifabric-users/users/2cc72669b8cc4814b904dca9ba192cbd/h3-submission/scripts/h3_delivery.py", line 274, in <module>
+    main()
+  File "/public/home/aclsylqidf/infinifabric-users/users/2cc72669b8cc4814b904dca9ba192cbd/h3-submission/scripts/h3_delivery.py", line 266, in main
+    stage(a.package, a.node)
+  File "/public/home/aclsylqidf/infinifabric-users/users/2cc72669b8cc4814b904dca9ba192cbd/h3-submission/scripts/h3_delivery.py", line 150, in stage
+    node.mkdir(parents=True)
+  File "/usr/local/lib/python3.11/pathlib.py", line 1120, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/usr/local/lib/python3.11/pathlib.py", line 1116, in mkdir
+    os.mkdir(self, mode)
+PermissionError: [Errno 13] Permission denied: '/tmp/h3-submission-230029'
+FIRST_ENTRY_EXIT=1
