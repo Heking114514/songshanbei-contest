@@ -1,225 +1,85 @@
-# MiniMax-H3 FL2VA：放置依赖、运行与获取结果
+# songshanbei-contest
 
-更新时间：2026-11-08T23:27:59+08:00（北京时间）。
+更新时间：2026-11-08T23:32:42+08:00（北京时间）。
 
-操作顺序：准备离线依赖并制作交付目录 → 上传个人AFS → 申请独占八卡 → 运行脚本 → 从AFS下载视频和日志。
+## 嵩山杯 MiniMax-H3 FL2VA 初赛
 
+统一输入图片：`inputs/first_frame.png`
 
-## 先分清：源码、交付包、运行环境
+统一 FL2VA Prompt：`A dog falls asleep`
 
-`h3-submission/` 是打包命令生成的目录，名字来自 `--output ../h3-submission`。仓库克隆下来时没有这个目录；下面第1步会创建它。
+### 复现指令
 
-| 东西 | 放在哪里 | 包含什么 | 何时创建 |
-|---|---|---|---|
-| 源码仓库 | 你克隆仓库的目录 | InfiniCore、InfiniLM、脚本、依赖清单、三份工具、图片和参考视频 | 克隆仓库时 |
-| 离线wheel文件夹 | 仓库同级 `h3-wheelhouse/` | 55个尚未安装的Python依赖文件 | 下载或放入依赖时 |
-| 上传交付包 | 仓库同级 `h3-submission/`，然后上传至AFS同名目录 | 压缩后的源码、依赖、工具，以及启动脚本、清单和参考视频 | 运行打包命令时 |
-| 已安装的运行环境 | 八卡节点 `$H3_NODE_ROOT/work/` | Python环境、安装后的依赖、工具和原生库 | 运行正式脚本时 |
-| 最终结果 | AFS `$H3_AFS_OUTPUT_DIR/` | 视频、日志及校验结果 | 推理结束保存时 |
+1. **准备上传目录。** 本仓库是源码。`h3-submission/` 是 [制包步骤](PACKAGING.md) 生成的交付目录，内含源码和全部离线依赖；克隆仓库后需先制包。已经收到该交付目录时，可直接使用。
 
-正式操作分为两处：**在源码仓库中制作交付包；在AFS交付包目录中启动推理。** 仓库内的 `run_submission.sh` 会随打包一起复制出去，启动时需要同目录下的 `delivery-manifest.json` 和 `payload.part*`。
+2. **上传文件。** 将整个 `h3-submission/` 上传到个人AFS根目录，保留目录结构。`payload.part*`、`delivery-manifest.json`、`scripts/` 和 `reference/` 全部上传。离线依赖已包含在分片中。
 
-## 整个环境在节点上是什么结构
-
-安装好的环境由脚本在八卡节点创建。`H3_NODE_ROOT` 是你在启动命令中设置的节点工程根目录，其下结构为：
-
-~~~text
-$H3_NODE_ROOT/                       # 八卡节点上的工程目录
-├── source/                         # 自动解压的源码
-│   ├── InfiniCore/                 # Core源码及构建文件
-│   ├── InfiniLM/                   # H3源码及构建文件
-│   ├── ninetoothed/
-│   └── scripts/
-├── wheelhouse/                     # 自动解压的55个原始wheel
-├── work/                           # 实际运行环境，脚本自动安装和加载
-│   ├── venv/bin/python3            # 本工程使用的Python入口
-│   ├── python/                    # 安装后的Python依赖和FlagTree
-│   ├── install/                   # 编译安装的InfiniCore/InfiniLM原生库
-│   ├── toolchain/                 # clang/lld工具链
-│   ├── xmake/                     # xmake构建工具
-│   ├── downloads/                 # 核验后的离线wheel副本
-│   ├── config/                    # 增量构建配置
-│   ├── jit/                       # 推理时生成的JIT缓存
-│   └── prepared.json              # 环境准备完成记录
-└── runs/
-    └── native-时间戳-进程号/        # check模式则为check-时间戳-进程号
-        ├── result.mp4
-        ├── generation.log
-        └── workflow.log
-~~~
-
-Python3.11和Torch2.9.0由平台 `/usr/local/` 提供，DTK由 `/opt/dtk/` 提供；脚本在此基础上安装本工程依赖。模型权重从 `MODEL_PATH` 指定的共享目录只读加载。
-
-例如将 `H3_NODE_ROOT` 设置为 `/节点私有目录/h3-submission-native`，实际Python入口就是 `/节点私有目录/h3-submission-native/work/venv/bin/python3`，安装后的依赖就在同级 `work/python/`。脚本自动配置并使用它们，无需另行激活环境。
-
-节点上的环境和编译产物随节点资源回收；AFS中的上传包和已保存结果长期保留。同一节点、相同交付包重试时，保留同一个 `H3_NODE_ROOT` 可复用环境和增量编译产物。新节点可使用AFS上传包重新安装和构建。
-
-## 1. 放置离线依赖并制作交付目录
-
-进入克隆得到的源码仓库，即能看到 `run_submission.sh`、`InfiniCore/` 和 `InfiniLM/` 的目录，再执行本节命令。这里将创建原先不存在的 `h3-wheelhouse/` 和 `h3-submission/`。若已收到制作好的交付包，可直接从第2步上传。制包电脑需要 Python 3.11 或更新版本。
-
-55个 Python wheel 放在仓库同级的 `h3-wheelhouse/` 中，直接放文件，不再套一层目录；文件名、大小和 SHA256 必须符合 `requirements/h3_linux_cp311.lock.json`。三份构建工具已经随源码放在 `third_party/h3/`。
-
-~~~text
-工作目录/
-├── 源码仓库/                       # 你克隆的目录，名称以实际为准
-│   ├── run_submission.sh
-│   ├── scripts/
-│   ├── requirements/h3_linux_cp311.lock.json
-│   ├── third_party/h3/
-│   │   ├── flagtree-0.7.0+hcu3.6-cp311-cp311-linux_x86_64.whl
-│   │   ├── hcu-jit-clang18-minimal.tar.gz
-│   │   └── xmake-v3.0.3.gz.run
-│   ├── inputs/first_frame.png
-│   └── reference/
-│       ├── reference_fl2va.mp4
-│       ├── case.json
-│       └── README.md
-├── h3-wheelhouse/                   # 55个锁定wheel，约183MiB
-└── h3-submission/                   # 下一条打包命令生成
-~~~
-
-已有55个wheel时直接放入 `../h3-wheelhouse/`。需要下载时，下面的命令按依赖锁中的地址下载并核验；再次运行会复用已通过校验的文件：
-
-~~~bash
-python - <<'WHEELS'
-import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, "scripts")
-from h3_bootstrap import fetch
-
-wheelhouse = Path("../h3-wheelhouse")
-wheelhouse.mkdir(parents=True, exist_ok=True)
-lock = json.loads(Path("requirements/h3_linux_cp311.lock.json").read_text())
-for wheel in lock["wheels"]:
-    fetch(wheel, wheelhouse)
-print("离线wheel准备完成：", wheelhouse.resolve())
-WHEELS
-~~~
-
-在同一仓库根目录制作交付包：
-
-~~~bash
-python scripts/h3_delivery.py package \
-  --repo . \
-  --wheelhouse ../h3-wheelhouse \
-  --output ../h3-submission
-~~~
-
-`../h3-submission` 必须是尚不存在的新目录。命令会校验依赖，合并源码和离线wheel，生成最多96MiB一片的 `payload.part*`，以及上传清单 `UPLOAD.md` 和校验清单 `delivery-manifest.json`。
-
-生成的交付目录已包含运行所需的源码、55个wheel和三份构建工具；上传时不必另传 `h3-wheelhouse/`。模型权重使用平台共享目录，不放进交付包。
-
-## 2. 上传到 AFS
-
-将整个 `h3-submission/` 上传到个人AFS根目录，保留所有文件名和子目录。AFS上的结构应为：
-
-~~~text
-个人AFS/
-├── h3-submission/
-│   ├── run_submission.sh
-│   ├── REPRODUCE.md
-│   ├── UPLOAD.md
-│   ├── delivery-manifest.json
-│   ├── payload.part000
-│   ├── payload.part001
-│   ├── payload.part002
-│   ├── payload.part003             # 分片数量以实际清单为准
-│   ├── scripts/
-│   │   ├── h3_delivery.py
-│   │   └── h3_source_identity.py
-│   └── reference/
-│       ├── reference_fl2va.mp4
-│       ├── case.json
-│       └── README.md
-├── storage-info.json
-└── h3-results/                     # 完成运行后自动保存结果
-~~~
-
-`payload.part*` 全部上传，保持分片形式；脚本会在计算节点合并、解压和编译。`reference/` 与分片一并上传。
-
-上传结束、八卡资源就绪后，准备个人AFS的最新完整容量统计 `storage-info.json`，放到AFS根目录。使用已安装并登录的平台 `ifab` 客户端时，可导出后上传此文件：
+3. **申请独占8卡并运行。** 资源就绪后，使用已登录的平台客户端导出容量统计，将生成的 `storage-info.json` 上传到个人AFS根目录：
 
 ~~~bash
 ifab --json afs-status > storage-info.json
 ~~~
 
-统计应完整且距启动不超过15分钟；排队较久需重新导出。个人AFS上限4GiB，脚本默认预留128MiB结果空间和32MiB余量。该统计文件是启动必需输入。
-
-## 3. 在八卡 Bash 中启动
-
-申请独占8卡资源并打开 Bash。在新打开的初始工作目录中执行下面整段命令；先确定节点构建目录，再进入AFS。
-
-平台通常已设置 `IFAB_AFS_HOME`；若没有，先执行 `export IFAB_AFS_HOME=/实际个人AFS根目录`。`MODEL_PATH` 指向平台共享 MiniMax-H3 权重目录，路径不同则替换。
+统计需完整且距启动不超过15分钟。随后打开新八卡Bash，在初始工作目录执行以下命令，将AFS路径改为自己的实际路径：
 
 ~~~bash
 set -euo pipefail
-: "${IFAB_AFS_HOME:?请先设置个人AFS根目录}"
+export IFAB_AFS_HOME=/path/to/your/afs
 
-# 在初始工作目录中设置；同一交付包重试时保留这个路径。
+# 在进入AFS前，确定本节点的环境和编译目录。
 export H3_NODE_ROOT="$(dirname "$PWD")/h3-submission-native"
 export MODEL_PATH=/public/home/aclsylqidf/shared/MiniMax-H3
-export H3_BASE_PYTHON=/usr/local/bin/python3
 export BUILD_JOBS=120
 export H3_AFS_INFO_JSON="$IFAB_AFS_HOME/storage-info.json"
-export H3_AFS_OUTPUT_DIR="$IFAB_AFS_HOME/h3-results/native-$(date -u +%Y%m%dT%H%M%SZ)"
+export H3_AFS_OUTPUT_DIR="$IFAB_AFS_HOME/h3-results/run-$(date -u +%Y%m%dT%H%M%SZ)"
 
 cd "$IFAB_AFS_HOME/h3-submission"
 unset H3_SHORT_SMOKE H3_INFINILM_VIDEO H3_REFERENCE_VIDEO
 bash run_submission.sh
 ~~~
 
-脚本依次完成：校验和展开交付包 → 安装离线依赖与工具 → `-j120` 编译所需H3/Core/绑定 → 完整生成视频 → 校验视频 → 保存到 `H3_AFS_OUTPUT_DIR`。
+脚本自动完成环境安装、`-j120` 编译、完整推理和AFS结果保存；编译与推理进度实时显示。
 
-默认用例为随包 `inputs/first_frame.png`、Prompt `A dog falls asleep`、seed42、50步请求、124帧、完整模型层数。正式入口直接运行完整推理。编译和推理日志实时显示，每30秒输出心跳。
-
-目标运行环境为赛事 Linux x86_64、Python3.11、平台 Torch2.9.0/HIP6.3、DTK/gfx936。Python依赖和构建工具从交付包安装，Torch与模型权重使用平台已有版本。
-
-`H3_NODE_ROOT` 必须是节点私有目录，位于初始workspace同级；源码、环境和编译产物放在那里。相同包重试时复用同一路径进行增量编译。每次 `H3_AFS_OUTPUT_DIR` 则应设置为个人AFS内尚不存在的新目录。
-
-## 4. 需要官方比较时，加 check
-
-默认模式只生成并保存视频。需要生成后比较时，完成上述环境变量配置，将最后的运行命令改为以下两行；两种模式选择一种即可：
+如果本次需要生成后运行官方比较，将上述最后一行改为：
 
 ~~~bash
-export H3_AFS_OUTPUT_DIR="$IFAB_AFS_HOME/h3-results/check-$(date -u +%Y%m%dT%H%M%SZ)"
 bash run_submission.sh check
 ~~~
 
-`check` 仍会生成一份新的完整native视频，然后使用AFS交付目录中 `reference/reference_fl2va.mp4` 运行原版官方比较，并检查结果。参考视频只需随包上传一次，后续运行直接复用。
+两种方式选一种。`check` 会新生成native视频，再与随包 `reference/reference_fl2va.mp4` 比较，参考视频直接复用。
 
-参考视频必须与当前图片、Prompt、seed和生成参数匹配。换输入图时，可用 `FIRST_FRAME` 指定图片，并用 `H3_INPUT_SHA256` 登记其SHA256；如需 `check`，还必须准备该用例对应的参考视频、更新 `reference/case.json` 并重新制包。当前入口的Prompt固定为 `A dog falls asleep`。
+### 输出位置
 
-## 5. 从 AFS 取回产物
+运行结果保存在启动时设置的 `H3_AFS_OUTPUT_DIR`，例如 `个人AFS/h3-results/run-时间戳/`。在平台AFS文件管理中打开该目录即可下载。
 
-本次结果目录就是启动前设置的 `H3_AFS_OUTPUT_DIR`。运行结束后可查看：
-
-~~~bash
-printf '本次结果目录：%s\n' "$H3_AFS_OUTPUT_DIR"
-ls -lh "$H3_AFS_OUTPUT_DIR"
-~~~
-
-在平台AFS文件管理中进入 `h3-results/`，打开对应的 `native-时间戳/` 或 `check-时间戳/`，下载 `result.mp4`；需要完整运行记录时，下载该次结果目录中的文件。
-
-| 内容 | 相对于本次结果目录的路径 |
+| 内容 | 本次结果目录内的路径 |
 |---|---|
 | 生成的视频 | `result.mp4` |
-| 推理日志及各阶段耗时 | `generation.log` |
-| 环境、编译和推理总日志 | `workflow.log` |
-| 输入、生成参数及源码指纹 | `invocation.json` |
-| 环境与加载库信息 | `origins.json`、`preflight.json` |
-| 视频帧数、尺寸和指纹 | `native-check.json` |
-| 运行状态 | `submission-status.json` |
-| 保存文件清单及SHA256 | `saved-manifest.json` |
+| 推理日志与各阶段耗时 | `generation.log` |
+| 环境、编译及推理总日志 | `workflow.log` |
+| 输入与生成参数 | `invocation.json` |
+| 视频规格与指纹 | `native-check.json` |
+| 运行状态与保存清单 | `submission-status.json`、`saved-manifest.json` |
 | 官方比较原文，仅check模式 | `compare/compare.log` |
 | 比较检查结果，仅check模式 | `evaluation.json` |
 
-例如，若结果目录为 `h3-results/native-20261108T140000Z/`，视频就在：
+脚本退出0、末行 `pipeline_rc=0` 和 `save_rc=0`，且AFS中存在视频和保存清单，表示生成及保存成功。
 
-~~~text
-个人AFS/h3-results/native-20261108T140000Z/result.mp4
-~~~
+### 文件和环境放在哪里
 
-成功标志：脚本退出码为0，末行 `pipeline_rc=0` 且 `save_rc=0`；AFS内有 `result.mp4`、状态为 `complete` 的 `submission-status.json` 和 `saved-manifest.json`。check模式还会生成官方比较日志和 `evaluation.json`。
+| 位置 | 内容 |
+|---|---|
+| 克隆得到的源码仓库 | 源码、脚本、依赖清单、三份构建工具、输入图及参考视频 |
+| 制包生成的 `h3-submission/` | 上传用的源码和离线依赖分片、清单及启动入口 |
+| 个人AFS `h3-submission/` | 上传后的交付包，长期保留 |
+| 八卡节点 `$H3_NODE_ROOT/work/` | 脚本安装的Python环境、依赖、工具与原生库 |
+| 个人AFS `h3-results/` | 保存的视频、日志和评测结果 |
+
+节点环境由脚本创建，随节点资源回收；相同节点和相同交付包重试时保留 `H3_NODE_ROOT`，复用环境与增量编译产物。平台提供Python3.11、Torch2.9.0/HIP6.3和DTK/gfx936，模型使用 `MODEL_PATH` 指向的共享权重。
+
+### 离线依赖与参考视频
+
+- 从源码制作交付目录：见 [PACKAGING.md](PACKAGING.md)，包括55个wheel的下载、放置和打包命令。
+- 完整节点环境结构：见 [ENVIRONMENT.md](ENVIRONMENT.md)。
+- 当前交付包由制包命令生成，尚未发布Release下载入口。
+- 换测试图片后，`check` 需要对应的新参考视频及 `reference/case.json`；当前入口Prompt固定为 `A dog falls asleep`。
