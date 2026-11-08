@@ -1,42 +1,39 @@
 # 源码、离线依赖与运行环境的位置
 
-更新时间：2026-11-09T00:45:35+08:00（北京时间）。
+更新时间：2026-11-09T01:19:29+08:00（北京时间）。
 
-上传、启动和取结果见 [README](README.md)，获取依赖见 [PACKAGING.md](PACKAGING.md)。
+启动命令与取结果见 [README](README.md)，依赖获取见 [PACKAGING.md](PACKAGING.md)。
 
-## AFS 上放什么
+## AFS目录
 
-| 位置 | 内容 | 如何准备 |
-|---|---|---|
-| `个人AFS/songshanbei-contest/` | 本仓库源码、脚本、三份工具、输入图及参考视频 | 上传源码仓库 |
-| `个人AFS/songshanbei-contest/offline-wheels/` | 55 个尚未安装的普通 wheel | 下载后原名放入 |
-| `个人AFS/storage-info.json` | 最新完整容量统计 | 资源就绪后导出并上传 |
-| `个人AFS/h3-results/` | 视频、日志和比较结果 | 运行结束由脚本保存 |
+| 位置 | 内容 |
+|---|---|
+| `个人AFS/songshanbei-contest/` | 上传的源码、三份工具、图片和参考视频 |
+| `个人AFS/songshanbei-contest/offline-wheels/` | 放入的55个普通wheel |
+| `个人AFS/h3-results/run-时间戳-进程号/` | 自动保存的本次视频、日志及比较结果 |
 
-AFS 中的源码和 wheel 是安装输入。实际 Python 环境、编译对象和 JIT 缓存由脚本在节点盘创建，避免占用个人 AFS。
+## 节点目录
 
-## 节点上的环境结构
-
-`H3_NODE_ROOT` 是启动时指定的节点目录，必须位于个人 AFS 和受限的 `workspace` 目录之外。在新八卡 Bash 的初始工作目录中，`$(dirname "$PWD")/h3-native` 表示初始目录的同级目录。
+脚本根据新终端的初始workspace自动选择其同级 `h3-native-编号/`；编号由AFS源码路径确定，相同节点和源码目录重试时保持稳定。启动时打印完整 `H3_NODE_ROOT` 路径。
 
 ~~~text
 $H3_NODE_ROOT/
-├── source-stage.json               # 上传源码的同步与校验记录
-├── source/                         # 从AFS复制的源码
-│   ├── InfiniCore/                 # Core源码及此节点的编译产物
-│   ├── InfiniLM/                   # H3源码及此节点的编译产物
+├── source-stage.json               # 源码同步与校验记录
+├── source/                         # 从AFS复制的源码及编译产物
+│   ├── InfiniCore/
+│   ├── InfiniLM/
 │   ├── ninetoothed/
 │   └── scripts/
-├── work/                           # 实际环境，脚本自动安装和加载
-│   ├── venv/bin/python3            # 本工程的Python入口
-│   ├── python/                    # 安装后的55个依赖及FlagTree
+├── work/                           # 自动安装和加载的环境
+│   ├── venv/bin/python3            # Python入口
+│   ├── python/                    # 安装后的依赖及FlagTree
 │   ├── install/                   # InfiniCore/InfiniLM原生库
-│   ├── toolchain/                 # clang/lld工具链
-│   ├── xmake/                     # xmake构建工具
-│   ├── downloads/                 # 从AFS复制并核验的离线wheel
+│   ├── toolchain/                 # clang/lld
+│   ├── xmake/
+│   ├── downloads/                 # 校验后的离线wheel副本
 │   ├── config/                    # 增量构建配置
-│   ├── jit/                       # 推理时生成的JIT缓存
-│   └── prepared.json              # 环境准备完成记录
+│   ├── jit/
+│   └── prepared.json
 └── runs/
     └── native-时间戳-进程号/        # check模式使用check前缀
         ├── result.mp4
@@ -44,12 +41,12 @@ $H3_NODE_ROOT/
         └── workflow.log
 ~~~
 
-Python 3.11 和 Torch 2.9.0/HIP 6.3 由平台 `/usr/local/` 提供，DTK/gfx936 工具由 `/opt/dtk/` 提供。脚本在此基础上创建 Python 入口，将依赖安装到 `work/python/`，将编译后的原生库安装到 `work/install/`。模型从 `MODEL_PATH` 指向的共享目录只读加载。
+Python3.11与Torch2.9.0/HIP6.3由平台/usr/local提供，DTK/gfx936由/opt/dtk提供。脚本在此基础上安装依赖和构建原生库，并自动配置使用，无需激活环境。模型从MODEL_PATH指向的共享目录只读加载。
 
-例如 `H3_NODE_ROOT=/节点私有目录/h3-native`，Python 入口就是 `/节点私有目录/h3-native/work/venv/bin/python3`。脚本自动设置其搜索路径和原生库路径，无需手工激活环境。
+## 执行目录与复用
 
-## 什么时候能复用
+推荐在新八卡终端初始目录运行README中的一行命令。如果从初始目录直接cd进仓库，也可以执行 `bash run_submission.sh`，入口通过前一个workspace定位节点盘。
 
-同一节点和同一 AFS 源码目录重试时，保留 `H3_NODE_ROOT`。入口按内容校验，未变化的源码不重写；环境和编译产物留在原位置，源码更新交由构建系统增量处理。旧编译目录不会从上传源码中带入。
+若终端已切换过多个目录，重新打开Bash使用推荐命令，或通过H3_NODE_ROOT指定已有节点工程目录。不会自动回退到/tmp、AFS或受限workspace内构建。
 
-节点资源回收后，上述节点目录随之回收。AFS 中上传的源码、wheel 和已保存结果继续保留；新节点重新安装和构建。
+同节点同源码目录重复运行，未变化的源码保持mtime，环境和对象保留；源码更新后增量编译。节点回收后，节点环境和对象回收；AFS源码、wheel和结果保留。

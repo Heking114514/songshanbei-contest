@@ -207,17 +207,24 @@ def destination():
 
 def reserve(run):
     dest = destination()
-    baseline = storage_snapshot(os.environ["H3_AFS_INFO_JSON"])
     cap = int(os.environ.get("H3_AFS_OUTPUT_CAP_MIB", "128")) * MiB
-    if not MiB <= cap <= 512 * MiB or min(baseline["used"], baseline["pending"]) < 0:
-        raise RuntimeError("Invalid AFS budget")
-    peak = baseline["used"] + baseline["pending"] + cap + 32 * MiB
-    if peak > baseline["limit"]:
-        raise RuntimeError("AFS 4 GiB budget exceeded; free space before starting")
+    if not MiB <= cap <= 512 * MiB:
+        raise RuntimeError("Invalid AFS output budget")
+    # An API snapshot is optional. Never invent a zero-usage account baseline.
+    snapshot = os.environ.get("H3_AFS_INFO_JSON")
+    baseline = storage_snapshot(snapshot) if snapshot else None
+    peak = None
+    if baseline is not None:
+        if min(baseline["used"], baseline["pending"]) < 0:
+            raise RuntimeError("Invalid AFS budget")
+        peak = baseline["used"] + baseline["pending"] + cap + 32 * MiB
+        if peak > baseline["limit"]:
+            raise RuntimeError("AFS 4 GiB budget exceeded; free space before starting")
     write_json(Path(run) / "afs-reservation.json",
                dict(destination=str(dest), baseline=baseline, cap=cap, peak=peak,
-                    note="Bounded reservation from API baseline; coordinate other AFS writers"))
-    print("H3_AFS_BUDGET_RESERVED", peak, baseline["limit"], "destination", dest, flush=True)
+                    quota_checked=baseline is not None,
+                    note="Bounded output size; account quota checked only with an explicit API snapshot"))
+    print("H3_AFS_OUTPUT_RESERVED", cap, "destination", dest, flush=True)
 
 
 def persist(run, rc):

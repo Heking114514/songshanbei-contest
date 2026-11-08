@@ -197,6 +197,33 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         with patch.dict(os.environ,env):
             with self.assertRaisesRegex(RuntimeError,"NEW directory"):delivery.persist(run,0)
 
+    def test_afs_without_snapshot_reserves_bounded_output_and_persists(self):
+        run, env = self.storage_env()
+        env.pop("H3_AFS_INFO_JSON")
+        (run / "result.mp4").write_bytes(b"video")
+        clean = {k: v for k, v in os.environ.items() if k != "H3_AFS_INFO_JSON"}
+        with patch.dict(os.environ, dict(clean, **env), clear=True), contextlib.redirect_stdout(io.StringIO()):
+            delivery.reserve(run)
+            reservation = json.loads((run / "afs-reservation.json").read_text(encoding="utf-8"))
+            self.assertFalse(reservation["quota_checked"])
+            self.assertIsNone(reservation["baseline"])
+            self.assertIsNone(reservation["peak"])
+            self.assertEqual(reservation["cap"], 128 * 1024**2)
+            delivery.persist(run, 0)
+        self.assertEqual((Path(env["H3_AFS_OUTPUT_DIR"]) / "result.mp4").read_bytes(), b"video")
+
+    def test_afs_without_snapshot_still_refuses_oversize_output(self):
+        run, env = self.storage_env()
+        env.pop("H3_AFS_INFO_JSON")
+        env["H3_AFS_OUTPUT_CAP_MIB"] = "1"
+        clean = {k: v for k, v in os.environ.items() if k != "H3_AFS_INFO_JSON"}
+        with patch.dict(os.environ, dict(clean, **env), clear=True), contextlib.redirect_stdout(io.StringIO()):
+            delivery.reserve(run)
+            (run / "huge.bin").write_bytes(b"x" * 1024**2)
+            with self.assertRaisesRegex(RuntimeError, "exceeds reserved"):
+                delivery.persist(run, 0)
+        self.assertFalse(Path(env["H3_AFS_OUTPUT_DIR"]).exists())
+
     def test_afs_over_quota_or_stale_snapshot_never_creates_destination(self):
         run,env=self.storage_env()
         path=Path(env["H3_AFS_INFO_JSON"])

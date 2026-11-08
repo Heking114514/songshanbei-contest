@@ -1,81 +1,73 @@
 # MiniMax-H3 FL2VA 运行说明
 
-更新时间：2026-11-09T00:45:35+08:00（北京时间）。
+更新时间：2026-11-09T01:19:29+08:00（北京时间）。
 
 ## 放文件
 
-将本仓库源码上传到 `个人AFS/songshanbei-contest/`，保证 `run_submission.sh` 位于该目录第一层。
+上传本仓库到 `个人AFS/songshanbei-contest/`，将依赖锁中的 55 个 wheel 原名放到其 `offline-wheels/`。三份工具、输入图和参考视频已随仓库提供。获取和核验依赖见 [PACKAGING.md](PACKAGING.md)。
 
-将 `requirements/h3_linux_cp311.lock.json` 中的 55 个 wheel 原名放入 `songshanbei-contest/offline-wheels/`。获取方法见 [PACKAGING.md](PACKAGING.md)。`third_party/h3/` 中的 FlagTree、clang/lld 和 xmake 已随源码提供；输入图和参考视频也在仓库中。
+## 一行启动
 
-准备后的结构和输出列表见 [README](README.md)。模型权重使用平台共享目录，不上传到个人 AFS。
-
-## 运行
-
-申请独占 8 卡。资源就绪后，用已登录的平台客户端执行：
+申请独占 8 卡，打开新 Bash，**在终端初始目录直接执行，无需先cd到AFS**：
 
 ~~~bash
-ifab --json afs-status > storage-info.json
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ~~~
 
-将文件放入个人 AFS 根目录。统计需完整，且距启动不超过 15 分钟；源码、wheel 和结果应合计小于个人 AFS 配额。
-
-在新八卡 Bash 的初始工作目录执行，替换个人 AFS 路径：
+需要本次完整生成后运行官方比较，改为：
 
 ~~~bash
-set -euo pipefail
-export IFAB_AFS_HOME=/path/to/your/afs
-export H3_NODE_ROOT="$(dirname "$PWD")/h3-native"
-export MODEL_PATH=/public/home/aclsylqidf/shared/MiniMax-H3
-export BUILD_JOBS=120
-export H3_AFS_INFO_JSON="$IFAB_AFS_HOME/storage-info.json"
-export H3_AFS_OUTPUT_DIR="$IFAB_AFS_HOME/h3-results/run-$(date -u +%Y%m%dT%H%M%SZ)"
-cd "$IFAB_AFS_HOME/songshanbei-contest"
-unset H3_SHORT_SMOKE H3_INFINILM_VIDEO H3_REFERENCE_VIDEO
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
+~~~
+
+也可以从新终端初始目录先进入仓库，再运行：
+
+~~~bash
+cd "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest"
 bash run_submission.sh
 ~~~
 
-默认流程为：核验离线输入 → 复制源码到节点 → 安装环境 → 编译 H3 所需目标 → 完整生成视频 → 保存到 AFS。参数为 8 卡、seed 42、50 步请求、124 帧，Prompt 为 `A dog falls asleep`。
+在仓库内需要比较时执行 `bash run_submission.sh check`。脚本从当前或前一个目录识别本节点workspace，自动选择其同级工作目录；若先切换过多个目录，推荐重新打开Bash后使用一行启动命令。
 
-需要生成后运行官方比较时，将最后一行改为：
-
-~~~bash
-bash run_submission.sh check
-~~~
-
-`check` 使用本次新生成视频与 `reference/reference_fl2va.mp4` 调用原版官方比较器，再检查比较输出和视频规格；它不会重新生成参考视频。
+默认流程为：核验离线输入 → 同步节点源码 → 安装环境 → -j120编译 → 完整生成 → AFS保存。参数保持8卡、完整层数、seed42、50步请求、124帧、Prompt为 `A dog falls asleep`。check在生成完成后调用原版官方比较器，复用已有参考视频。
 
 ## 拿结果
 
-到平台 AFS 文件管理中的 `$H3_AFS_OUTPUT_DIR/` 下载：
+每次自动保存到 `个人AFS/h3-results/run-时间戳-进程号/`，完整路径会显示在终端。视频为 `result.mp4`，日志和其他产物见 [README输出表](README.md#结果从哪里拿)。
 
-| 内容 | 文件 |
+退出0、末行pipeline_rc=0/save_rc=0，且存在AFS视频及saved-manifest.json才表示生成和保存成功。保存失败时，终端末行提供节点产物位置。
+
+## 默认设置与可选覆盖
+
+标准赛事环境直接使用上述命令即可。默认设置为：
+
+| 设置 | 默认值 |
 |---|---|
-| 视频 | `result.mp4` |
-| 推理与总流程日志 | `generation.log`、`workflow.log` |
-| 输入与参数 | `invocation.json` |
-| 规格及运行状态 | `native-check.json`、`submission-status.json` |
-| 保存清单 | `saved-manifest.json` |
-| 官方比较原文，仅check模式 | `compare/compare.log` |
-| 比较检查结果，仅check模式 | `evaluation.json` |
+| 个人AFS根 | 平台IFAB_AFS_HOME，未设置时使用HOME |
+| 源码及wheel | 启动脚本所在目录及其offline-wheels/ |
+| 节点环境 | 当前或前一个workspace的同级h3-native-编号/ |
+| 共享模型 | /public/home/aclsylqidf/shared/MiniMax-H3 |
+| 编译并行数 | 120 |
+| 结果目录 | AFS/h3-results/run-时间戳-进程号/ |
+| 单次保存上限 | 128MiB |
 
-退出 0、末行 `pipeline_rc=0` 和 `save_rc=0`，并存在 AFS 视频及保存清单，表示生成及保存成功。失败时查看 `workflow.log` 和 `submission-status.json`；保存失败时，日志末行会给出节点产物位置。
+共享模型路径不同时，可在启动前 `export MODEL_PATH=/实际模型路径`。需要指定节点目录时，设置 `H3_NODE_ROOT` 为AFS和workspace之外的节点盘目录；需要固定输出位置时，设置 `H3_AFS_OUTPUT_DIR` 为AFS内尚不存在的新目录。日常运行无需设置这些变量。
 
-## 重试与增量编译
+平台需提供Python3.11、Torch2.9.0/HIP6.3、DTK/gfx936和共享权重。容量检查不作为启动前置步骤；结果按单次上限保存，个人AFS仍需有足够可用空间。
 
-同一节点、同一 AFS 源码目录重试时，保留 `H3_NODE_ROOT`；为本次结果设置新的 `H3_AFS_OUTPUT_DIR`，并更新容量统计。未变化的源码保持时间戳，已有环境和编译对象继续复用。源码更新后只复制变化文件，交由构建系统增量编译。
+## 增量重试
 
-节点源码存在独立修改时，入口会拒绝覆盖；请先保存该修改，或为不同实验指定新的节点目录。新节点需要重新安装环境和构建，不能复用已回收节点的目录。
+相同节点、相同AFS源码目录自动选择同一节点目录，复用环境和对象；每次生成使用新输出目录。未变化的源码不重写，变化文件交给构建系统增量处理。节点源码存在独立修改时拒绝覆盖。
+
+节点回收后环境和对象随之回收，新节点重新安装和构建；AFS源码、wheel及已保存结果继续保留。结构见 [ENVIRONMENT.md](ENVIRONMENT.md)。
 
 ## 更换测试图片
 
-默认图片为 `inputs/first_frame.png`。换图片后，运行前指定图片路径和它的 SHA256：
+运行前指定新图片及其SHA256：
 
 ~~~bash
-export FIRST_FRAME="$IFAB_AFS_HOME/songshanbei-contest/inputs/new_frame.png"
+export FIRST_FRAME="${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/inputs/new_frame.png"
 export H3_INPUT_SHA256=替换为新图片的64位SHA256
 ~~~
 
-可用 `sha256sum inputs/new_frame.png` 获取校验值。Prompt 当前固定为 `A dog falls asleep`，其他生成参数如上。
-
-`check` 还要求将 `reference/reference_fl2va.mp4` 换成新用例对应的参考视频，并更新 `reference/case.json` 中的图片、视频 SHA256、视频字节数和生成参数。旧参考视频不能用于新图片。参考视频来源与登记说明见 [reference/README.md](reference/README.md)；新用例仍需实际验收。
+可用 `sha256sum inputs/new_frame.png` 获取校验值。Prompt当前固定，其他参数如上。check还需更新 `reference/reference_fl2va.mp4` 和 `reference/case.json`，绑定新图片及新参考视频。登记字段见 [reference说明](reference/README.md)，不能用旧参考视频比较新图片。

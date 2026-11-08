@@ -9,16 +9,19 @@ case "${1:-}" in
     -h|--help) printf 'Usage: bash run_submission.sh [check]\nDefault: full native generation and AFS save. check: also compare against the bundled reference.\n'; exit 0;;
     *) printf 'Usage: bash run_submission.sh [check]\n' >&2; exit 64;;
 esac
-: "${IFAB_AFS_HOME:?Set personal AFS root}"
-: "${MODEL_PATH:?Set platform shared MiniMax-H3 model directory}"
-: "${H3_AFS_OUTPUT_DIR:?Set a new AFS result directory}"
-: "${H3_AFS_INFO_JSON:?Set fresh GET /api/persistent-storage JSON after upload}"
-: "${H3_NODE_ROOT:?Set node storage outside AFS and workspace; see REPRODUCE.md}"
+: "${IFAB_AFS_HOME:=${HOME:?Personal AFS home is unavailable}}"
+export IFAB_AFS_HOME
+export MODEL_PATH="${MODEL_PATH:-/public/home/aclsylqidf/shared/MiniMax-H3}"
+export H3_AFS_OUTPUT_DIR="${H3_AFS_OUTPUT_DIR:-$IFAB_AFS_HOME/h3-results/run-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+export BUILD_JOBS="${BUILD_JOBS:-120}"
 export H3_BASE_PYTHON="${H3_BASE_PYTHON:-/usr/local/bin/python3}"
 export H3_DELIVERY_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_DELIVERY_DIR/offline-wheels}"
-export H3_NODE_ROOT
+stage_args=(--source "$H3_DELIVERY_DIR" --wheelhouse "$H3_WHEELHOUSE")
+if [ -n "${H3_NODE_ROOT:-}" ]; then stage_args+=(--node "$H3_NODE_ROOT"); fi
 H3_NODE_ROOT="$(env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u \
-    "$H3_DELIVERY_DIR/scripts/h3_source_stage.py" --source "$H3_DELIVERY_DIR" \
-    --wheelhouse "$H3_WHEELHOUSE" --node "$H3_NODE_ROOT")"
+    "$H3_DELIVERY_DIR/scripts/h3_source_stage.py" "${stage_args[@]}")"
+export H3_NODE_ROOT
+printf 'H3_SOURCE_DIR=%s\nH3_NODE_ROOT=%s\nH3_AFS_OUTPUT_DIR=%s\n' \
+    "$H3_DELIVERY_DIR" "$H3_NODE_ROOT" "$H3_AFS_OUTPUT_DIR"
 exec bash --noprofile --norc "$H3_NODE_ROOT/source/scripts/h3_submission_common.sh" "$mode"

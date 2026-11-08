@@ -165,31 +165,106 @@ class SourceStageTests(unittest.TestCase):
             self.run_stage()
         self.assertFalse(self.node.exists())
 
-    def test_root_entry_runs_from_source_and_forwards_mode_and_wheelhouse(self):
-        shell = os.environ.get("H3_TEST_GIT_BASH")
-        if not shell or "system32" in shell.lower():
-            self.skipTest("Explicit native Git Bash required")
+    def install_launcher(self):
         for name in ("run_submission.sh", "scripts/h3_source_stage.py", "scripts/h3_bootstrap.py",
                      "scripts/h3_delivery.py", "scripts/h3_source_identity.py"):
             shutil.copyfile(ROOT / name, self.repo / name)
         self.put("scripts/h3_submission_common.sh", b"""#!/usr/bin/env bash
 set -eu
-"$H3_BASE_PYTHON" -c 'import os,sys; print("WORKER",sys.argv[1],os.environ["H3_WHEELHOUSE"])' "$1"
+"$H3_BASE_PYTHON" - "$1" <<'WORKER_PY'
+import json, os, sys
+print("WORKER_ENV", json.dumps(dict(mode=sys.argv[1], node=os.environ["H3_NODE_ROOT"],
+    output=os.environ["H3_AFS_OUTPUT_DIR"], wheels=os.environ["H3_WHEELHOUSE"],
+    model=os.environ["MODEL_PATH"], jobs=os.environ["BUILD_JOBS"],
+    snapshot=os.environ.get("H3_AFS_INFO_JSON"))))
+WORKER_PY
 """)
-        for mode, args in (("native", []), ("check", ["check"])):
+
+    def launch(self, cwd, args=(), extra=None):
+        shell = os.environ.get("H3_TEST_GIT_BASH")
+        if not shell or "system32" in shell.lower():
+            self.skipTest("Explicit native Git Bash required")
+        env = {k: v for k, v in os.environ.items() if not k.startswith("H3_")}
+        for name in ("MODEL_PATH", "BUILD_JOBS", "OLDPWD"):
+            env.pop(name, None)
+        env.update(IFAB_AFS_HOME=self.afs.as_posix(),
+                   H3_BASE_PYTHON=Path(sys.executable).as_posix())
+        env.update(extra or {})
+        return subprocess.run([shell, "--noprofile", "--norc",
+            (self.repo / "run_submission.sh").as_posix(), *args],
+            cwd=cwd, env=env, capture_output=True, text=True, timeout=30)
+
+    def worker_env(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return json.loads(next(line.removeprefix("WORKER_ENV ") for line in result.stdout.splitlines()
+                               if line.startswith("WORKER_ENV ")))
+
+    def test_root_entry_runs_from_source_and_forwards_mode_and_wheelhouse(self):
+        self.install_launcher()
+        for mode, args in (("native", ()), ("check", ("check",))):
             with self.subTest(mode=mode):
-                env = {k: v for k, v in os.environ.items() if not k.startswith("H3_")}
-                env.update(IFAB_AFS_HOME=str(self.afs), MODEL_PATH=str(self.root / "model"),
-                    H3_NODE_ROOT=self.node.as_posix(), H3_BASE_PYTHON=Path(sys.executable).as_posix(),
-                    H3_AFS_OUTPUT_DIR=(self.afs / "results").as_posix(),
-                    H3_AFS_INFO_JSON=(self.afs / "storage.json").as_posix())
-                result = subprocess.run([shell, "--noprofile", "--norc",
-                    (self.repo / "run_submission.sh").as_posix(), *args],
-                    env=env, capture_output=True, text=True, timeout=30)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertIn("WORKER " + mode, result.stdout)
-                self.assertIn(self.wheels.as_posix(), result.stdout)
+                result = self.launch(self.repo, args, dict(H3_NODE_ROOT=self.node.as_posix()))
+                data = self.worker_env(result)
+                self.assertEqual(data["mode"], mode)
+                self.assertEqual(Path(data["wheels"]), self.wheels)
                 self.assertFalse((self.repo / "delivery-manifest.json").exists())
+                self.assertIsNone(data["snapshot"])
+
+    def test_copy_paste_launch_from_fresh_workspace_needs_no_manual_paths_or_json(self):
+        self.install_launcher()
+        workspace = self.root / "session/workspace"
+        workspace.mkdir(parents=True)
+        for args in ((), ("check",)):
+            result = self.launch(workspace, args)
+            data = self.worker_env(result)
+            node = Path(data["node"])
+            self.assertEqual(node.parent, workspace.parent)
+            self.assertTrue(node.name.startswith("h3-native-"))
+            self.assertTrue(Path(data["output"]).is_relative_to(self.afs / "h3-results"))
+            self.assertIsNone(data["snapshot"])
+            self.assertEqual(data["jobs"], "120")
+            # Git Bash translates absolute Linux env paths for the Windows Python stub.
+            self.assertTrue(data["model"].replace("\\\\", "/").endswith(
+                "/public/home/aclsylqidf/shared/MiniMax-H3"))
+
+    def test_repository_directory_launch_uses_previous_node_workspace(self):
+        self.install_launcher()
+        workspace = self.root / "session/workspace"
+        workspace.mkdir(parents=True)
+        data = self.worker_env(self.launch(self.repo, extra=dict(OLDPWD=workspace.as_posix())))
+        self.assertEqual(Path(data["node"]).parent, workspace.parent)
+
+    def test_automatic_node_directory_is_stable_and_preserves_cached_object(self):
+        self.install_launcher()
+        workspace = self.root / "session/workspace"
+        workspace.mkdir(parents=True)
+        first = self.worker_env(self.launch(workspace))
+        node = Path(first["node"])
+        obj = node / "source/InfiniCore/build/keep.o"
+        obj.parent.mkdir(parents=True)
+        obj.write_bytes(b"incremental object fixture")
+        before = (digest(obj), obj.stat().st_mtime_ns)
+        second = self.worker_env(self.launch(workspace))
+        self.assertEqual(first["node"], second["node"])
+        self.assertNotEqual(first["output"], second["output"])
+        self.assertEqual(before, (digest(obj), obj.stat().st_mtime_ns))
+        receipt = json.loads((node / "source-stage.json").read_text(encoding="utf-8"))
+        self.assertEqual(receipt["changed_files"], 0)
+
+    def test_missing_node_context_reports_the_initial_terminal_command(self):
+        self.install_launcher()
+        result = self.launch(self.repo)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("NEW eight-GPU terminal", result.stderr)
+        self.assertFalse((self.afs / "h3-native").exists())
+
+    def test_auto_node_selection_does_not_use_workspace_inside_afs(self):
+        workspace = self.afs / "workspace"
+        workspace.mkdir()
+        with patch.dict(os.environ, dict(OLDPWD=str(workspace))), \
+                patch.object(stage.Path, "cwd", return_value=self.repo):
+            with self.assertRaisesRegex(RuntimeError, "Cannot locate node workspace"):
+                stage.node_directory(self.repo)
 
 
 if __name__ == "__main__":

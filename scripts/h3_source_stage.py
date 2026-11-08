@@ -1,6 +1,7 @@
 """Stage uploaded source and locked wheels for node-local H3 execution."""
 import argparse
 import contextlib
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -84,8 +85,33 @@ def git_metadata(root):
         return None, None
 
 
-def stage(source, wheels, node):
-    source, wheels, node = (Path(p).resolve() for p in (source, wheels, node))
+def node_directory(source, explicit=None):
+    if explicit is not None:
+        return Path(explicit).resolve()
+    afs = Path(os.environ["IFAB_AFS_HOME"]).resolve()
+    candidates = [Path.cwd()]
+    if os.environ.get("OLDPWD"):
+        candidates.append(Path(os.environ["OLDPWD"]))
+    for candidate in candidates:
+        candidate = candidate.resolve()
+        if candidate.is_relative_to(afs):
+            continue
+        for workspace in (candidate, *candidate.parents):
+            if workspace.name == "workspace" and workspace.is_dir():
+                parent = workspace.parent
+                if parent == Path(parent.anchor) or parent.is_relative_to(afs):
+                    continue
+                key = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:10]
+                return parent / ("h3-native-" + key)
+    raise RuntimeError(
+        'Cannot locate node workspace. In a NEW eight-GPU terminal, before changing '
+        'directory, run: bash "$IFAB_AFS_HOME/songshanbei-contest/run_submission.sh" '
+        '(or set H3_NODE_ROOT to node storage outside AFS/workspace).')
+
+
+def stage(source, wheels, node=None):
+    source, wheels = (Path(p).resolve() for p in (source, wheels))
+    node = node_directory(source, node)
     afs = Path(os.environ["IFAB_AFS_HOME"]).resolve()
     if source == afs or not source.is_relative_to(afs):
         raise RuntimeError("Uploaded source must be a project directory inside personal AFS")
@@ -176,7 +202,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--wheelhouse", type=Path, required=True)
-    parser.add_argument("--node", type=Path, required=True)
+    parser.add_argument("--node", type=Path, help="Optional node directory; default: session workspace sibling")
     args = parser.parse_args()
     stage(args.source, args.wheelhouse, args.node)
 
