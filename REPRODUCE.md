@@ -1,8 +1,34 @@
 # MiniMax-H3 FL2VA 交付包操作说明
 
-更新时间：2026-11-08T23:15:02+08:00（北京时间）。
+更新时间：2026-11-08T23:27:59+08:00（北京时间）。
 
 本目录已经包含源码、离线Python依赖、构建工具和参考视频。将整个目录上传到个人AFS后，在独占八卡Bash中运行。
+
+## 这个目录和运行环境是什么关系
+
+你现在拿到的是制作好的上传交付包。它由源码仓库中的 `python scripts/h3_delivery.py package ... --output ../h3-submission` 生成；目录名 `h3-submission` 来自打包命令的输出参数。
+
+本目录保存的是源码与离线依赖压缩分片。将其上传到AFS后启动 `run_submission.sh`，脚本才会在八卡节点 `H3_NODE_ROOT` 下解压源码、安装环境和编译。
+
+~~~text
+AFS/h3-submission/                   # 你上传的交付包，保留在AFS
+    ↓ 运行run_submission.sh
+$H3_NODE_ROOT/                      # 节点私有工程根
+├── source/                         # 自动解压的源码
+├── wheelhouse/                     # 自动解压的原始wheel
+├── work/
+│   ├── venv/bin/python3            # 本工程Python入口
+│   ├── python/                     # 安装后的Python依赖
+│   ├── install/                    # 编译安装的原生库
+│   ├── toolchain/                  # clang/lld
+│   ├── xmake/                      # 构建工具
+│   └── jit/                        # 推理JIT缓存
+└── runs/本次运行/                   # 节点上的本次结果
+    ↓ 自动保存
+$H3_AFS_OUTPUT_DIR/result.mp4        # AFS上的最终视频
+~~~
+
+Python/Torch和DTK由平台提供，共享模型目录由 `MODEL_PATH` 指定。本工程的Python依赖、工具和原生库安装在节点 `$H3_NODE_ROOT/work/`，由脚本自动加载。节点环境随资源回收，AFS交付包和已保存结果长期保留。
 
 ## 1. 上传到 AFS
 
