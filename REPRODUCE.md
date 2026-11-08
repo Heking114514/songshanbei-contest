@@ -1,6 +1,6 @@
 # H3 官方复现命令与验收范围
 
-更新时间：2026-11-08T12:34:05+08:00（北京时间）。
+更新时间：2026-11-08T12:40:52+08:00（北京时间）。
 
 这是仓库内的完整命令入口，覆盖两条工作流：单卡用于后续算法更新后的增量编译与双端推理自验；八卡用于从环境准备到双方全新生成的官方FL2VA提交。另保留八卡短推理用于快速确认链路。允许使用按SHA校验的预下载依赖；失败在同一checkout/work增量续跑，不clean。本提交包含所需入口、固定依赖资产与运行边界，发布整理没有新增服务器任务。当前命令对应已知模板用例；官方更换图片/Prompt或脚本时，先按下方“官方更换测试用例”处理已知适配缺口，不能将当前封装视作任意新用例已验收。
 
@@ -41,7 +41,7 @@ bash --noprofile --norc scripts/reproduce_h3_all.sh
 
 交付根目录包含 `InfiniCore/`、`InfiniLM/`、`ninetoothed/`、`scripts/`、`requirements/`、`third_party/h3/`、`inputs/`，不需要仓库外 handover 脚本。此前公开基线是`834488108a0af0636590e2349240ac336163ecc5`，该旧commit不含本次新增入口与依赖。复现时选择包含本文、scripts/requirements/third_party资产的完整提交；运行时记录git rev-parse HEAD，不能以旧基线代替。
 
-用实际发布的完整40位SHA设置H3_COMMIT，匿名clone到新节点目录，并以detached HEAD固定版本。匿名clone实机整链仍待验收；以下命令不代表已完成该项：
+源码与依赖提交cb6812d15cb2ececfe7b91130ff7491b4b6805c1已通过SSH推送并核对远程ref；匿名网页/API/raw当前返回404，公开可访问性未确认。以下匿名clone流程需仓库实际公开可读后再执行。用包含所需内容的实际完整40位SHA设置H3_COMMIT，clone到新节点目录，并以detached HEAD固定版本。匿名clone实机整链仍待验收；以下命令不代表已完成该项：
 
 ```bash
 set -euo pipefail
@@ -65,7 +65,7 @@ test -z "$(git status --porcelain)"
 
 目标是赛事海光 Linux x86_64：CPython 3.11、平台 Torch 2.9.0 / HIP 6.3、gfx936、DTK `/opt/dtk`。Torch 必须来自平台 `/usr/local`，不能被普通 PyPI Torch 覆盖。基础 Python 默认 `/usr/local/bin/python3`；同环境下可显式设置 `H3_BASE_PYTHON`。平台需有 pip、venv、Git、make、C/C++ 构建工具，且允许从锁定 URL 下载 Python wheel。
 
-`requirements/h3_linux_cp311.lock.json` 锁定 55 个 wheel 的版本、URL、大小、SHA 和依赖元数据；对应 txt 便于审阅。共下载 192118057 字节，闭包检查通过；**本轮已在新Python目录安装并通过八卡短推理**；依赖随本提交公开，匿名clone实机整链仍待验收。venv 使用平台 site-packages 保留 Torch，锁定依赖安装在独立 `work/python`；入口重建 PATH/PYTHONPATH/动态库路径，并审计实际导入来源。
+`requirements/h3_linux_cp311.lock.json` 锁定 55 个 wheel 的版本、URL、大小、SHA 和依赖元数据；对应 txt 便于审阅。共下载 192118057 字节，闭包检查通过；**本轮已在新Python目录安装并通过八卡短推理**；依赖随本提交提供，匿名clone实机整链仍待验收。venv 使用平台 site-packages 保留 Torch，锁定依赖安装在独立 `work/python`；入口重建 PATH/PYTHONPATH/动态库路径，并审计实际导入来源。
 
 随附第三方资产共 149724964 字节：HCU FlagTree wheel、clang/lld JIT 工具链、xmake 3.0.3 源码安装包。其来源、SHA、许可与构建补丁见 [第三方说明](third_party/h3/README.md) 和 manifest。它们属于编译依赖；H3 原生库与 JIT 内核将在新目录首次生成。这里不恢复个人 venv、旧 H3 二进制或旧 JIT。
 
@@ -203,4 +203,4 @@ prepare 的已验证下载可复用；中断的 Python staging 会留作诊断�
 
 [已有官方原文](results/h3_official_compare_20261107.txt) 为完整模型：Size PASS、Length PASS、平均 SSIM 94.277%。该轮新生成 reference、复用已核验 native 视频，native 计时 n/a；无同轮加速比。SSIM 不等于相同像素比例，也不代表音频一致性。
 
-当前用户要求的八卡环境准备、原生构建、正常进入推理已完成，且两次完整短推理保存视频；首次原生构建跨两轮租约，后续总入口复用本轮1194对象，不能宣称一个不中断的冷启动调用已经实测。本提交公开当前修复/依赖及其真实验收边界，正式交付仍需：固定实际发布SHA并匿名clone实机验收；如走single-ready门禁则补单卡分支；足时八卡双方全新生成及原版compare；保存同轮参数/日志/视频SHA并填写正式报告。不得把本轮短推理当正式compare成绩。
+当前用户要求的八卡环境准备、原生构建、正常进入推理已完成，且两次完整短推理保存视频；首次原生构建跨两轮租约，后续总入口复用本轮1194对象，不能宣称一个不中断的冷启动调用已经实测。本提交提供当前修复/依赖及其真实验收边界，正式交付仍需：固定实际发布SHA并匿名clone实机验收；如走single-ready门禁则补单卡分支；足时八卡双方全新生成及原版compare；保存同轮参数/日志/视频SHA并填写正式报告。不得把本轮短推理当正式compare成绩。
