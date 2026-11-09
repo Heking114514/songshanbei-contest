@@ -1,118 +1,150 @@
-# songshanbei-contest
+# MiniMax-H3 八卡阶段提交工作区
 
-更新时间：2026-11-09T15:24:04+08:00（北京时间）。
+更新时间：2026-11-09T18:36:08+08:00（北京时间）。
 
-## 嵩山杯 MiniMax-H3 FL2VA 初赛
+统一首帧：`inputs/first_frame.png`；统一 FL2VA Prompt：**A dog falls asleep**。
 
-统一首帧：`inputs/first_frame.png`
+## 一、操作流程
 
-统一 FL2VA Prompt：`A dog falls asleep`
+### 1. 源码与依赖下载
 
-### 复现：上传源码和 ZIP，一行启动
+下载本仓库 **main 分支源码**，再从 [offline-wheel Release](https://github.com/Heking114514/songshanbei-contest/releases/tag/offline-wheel) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
 
-1. 将本仓库源码上传到个人 AFS 根目录，目录命名为 **`songshanbei-contest/`**。目录内应直接有 `run_submission.sh`、`InfiniCore/`、`InfiniLM/`，源码需是展开的文件夹。
-2. 从[离线依赖 Release](https://github.com/Heking114514/songshanbei-contest/releases/tag/offline-wheel)下载 **`h3-offline-wheels-linux-cp311.zip`**，放到上述目录，**与 `run_submission.sh` 同级，保持原名，无需手工解压**。依赖获取说明见 [PACKAGING.md](PACKAGING.md)；仓库本身不包含这个 ZIP。
-3. 申请独占 8 卡，打开新 Bash，**在终端初始目录直接粘贴**：
+仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
 
-~~~bash
-bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
-~~~
+### 2. 文件上传
 
-**启动后无需人工解压、安装、切换环境或分步编译。** 脚本自动完成：检查文件完整性 → 把源码复制到节点盘 → 把依赖 ZIP 解压到节点盘 → 安装 Python 依赖与解包工具链 → `-j120` 编译 → 完整 8 卡推理 → 把视频和日志保存到个人 AFS。进度实时打印，错误会停止后续步骤并输出原因。无需计算或填写 SHA256。
+将整个 `songshanbei-contest/` 文件夹上传到**个人 AFS 根目录**，保留所有仓库文件。ZIP 与 `run_submission.sh` 必须同级：
 
-### 文件必须这样放
-
-~~~text
+```text
 个人AFS/
 └── songshanbei-contest/
     ├── run_submission.sh
-    ├── h3-offline-wheels-linux-cp311.zip   # 另行下载，原名放这里，不解压
+    ├── h3-offline-wheels-linux-cp311.zip
     ├── InfiniCore/
     ├── InfiniLM/
     ├── ninetoothed/
     ├── scripts/
     ├── requirements/
-    ├── third_party/h3/                    # 仓库自带4份工具
-    ├── inputs/first_frame.png             # 仓库自带首帧
-    └── reference/                        # 仓库自带参考视频和case.json
-~~~
+    ├── third_party/
+    ├── inputs/first_frame.png
+    └── reference/
+```
 
-ZIP 内为 `offline-wheels/` 目录及 55 个 wheel，脚本直接解压到**节点**的 `work/downloads/`，不会在 AFS 展开一份依赖。也兼容已解压的 `songshanbei-contest/offline-wheels/*.whl`；两种方式选一种即可，同时存在且目录中有wheel时优先使用该目录；只有README的目录不影响ZIP识别。请勿把 ZIP 放在 `offline-wheels/` 内。
+### 3. 脚本启动
 
-### 从下载到运行的完整命令
+申请**独占 8 卡**，打开新的 Bash 终端，在**初始目录直接执行，无需先 cd**：
 
-下面分为两个执行位置：先在本地 Git Bash 下载，再上传文件；申请八卡后，在新的 Bash 终端运行。私有仓库和 Release 需要账号具备读取权限；也可在浏览器登录后下载源码和 ZIP。
+```bash
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
+```
 
-~~~bash
-# 1. 本地 Git Bash：获取 main 源码。
+脚本自动解压依赖、安装环境、准备工具链、`-j120` 编译、完整八卡推理并保存结果，进度实时打印。无需手工切换环境或分步编译。
+
+平台需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享模型 `/public/home/aclsylqidf/shared/MiniMax-H3`。默认使用完整模型、seed42、50步请求、124帧；**不加 check，官方比较在视频下载后于本地进行。**
+
+### 4. 产物获取
+
+终端末行出现 **`pipeline_rc=0 save_rc=0`** 后，到 AFS 文件管理打开终端显示的结果目录：
+
+```text
+个人AFS/h3-results/run-时间戳-进程号/
+```
+
+| 文件 | 内容 |
+|---|---|
+| `result.mp4` | 生成视频 |
+| `generation.log` | 推理日志 |
+| `workflow.log` | 环境、编译和推理日志 |
+| `invocation.json` | 输入及运行参数 |
+| `native-check.json` | 视频规格检查 |
+| `submission-status.json`、`saved-manifest.json` | 运行状态、保存清单 |
+
+确认视频和保存清单已在 AFS 中，再**释放八卡资源**。节点临时目录会随资源回收，最终产物以 AFS 结果目录为准。
+
+### 5. 总结
+
+```bash
+# ==========================================================
+# 1. 本地 Git Bash：获取 main 源码和离线依赖
+# 仓库为私有仓库，需要当前 GitHub 账号有读取权限。
+# ==========================================================
+
 git clone --branch main --single-branch \
   https://github.com/Heking114514/songshanbei-contest.git
+
 cd songshanbei-contest
 
-# 下载离线依赖；也可以从 Release 页面手动下载。
+# 也可以从 Release 页面手动下载此文件。
 curl -fL --retry 3 -C - \
   -o h3-offline-wheels-linux-cp311.zip \
   "https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip"
 
-# 2. 将整个 songshanbei-contest 文件夹上传到个人 AFS 根目录。
-# 源码保持展开，依赖 ZIP 保持原名、不解压。
-# 上传后 run_submission.sh 和 ZIP 必须同级：
+# 将整个 songshanbei-contest 文件夹上传到个人 AFS 根目录。
+# 源码保持展开状态，依赖 ZIP 保持原名，不要解压。
+#
+# 上传后应当是：
 # 个人AFS/songshanbei-contest/run_submission.sh
 # 个人AFS/songshanbei-contest/h3-offline-wheels-linux-cp311.zip
-# 其余源码目录也全部保留。
+# 个人AFS/songshanbei-contest/InfiniCore/
+# 个人AFS/songshanbei-contest/InfiniLM/
+# 个人AFS/songshanbei-contest/scripts/
+# 个人AFS/songshanbei-contest/third_party/
+# 个人AFS/songshanbei-contest/inputs/first_frame.png
+# 个人AFS/songshanbei-contest/reference/
+# 其余仓库文件也完整保留。
 
-# 3. 申请独占 8 卡，打开新的 Bash。
-# 下面这一行在新终端初始目录执行，不要先 cd。
+# ==========================================================
+# 2. 平台申请独占 8 卡，打开新的 Bash 终端
+# 以下命令在新终端初始目录执行，无需先 cd。
+# ==========================================================
+
 bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
-# 脚本自动完成源码暂存、ZIP解压、环境准备、-j120编译、
-# 完整八卡推理、视频检查与AFS保存；无需手工切换环境。
-# 首帧：inputs/first_frame.png
+# 脚本自动完成：
+# 源码暂存到节点盘 → ZIP解压 → Python环境安装
+# → 工具链准备 → -j120编译 → 完整八卡推理
+# → 检查视频 → 保存视频和日志到AFS
+#
+# 默认首帧：inputs/first_frame.png
 # Prompt：A dog falls asleep
-# 完整模型、8卡、seed42、50步请求、124帧。
+# 参数：完整模型、8卡、seed42、50步请求、124帧
+# 不加 check；官方比较在视频下载后于本地进行。
 
-# 4. 末行 pipeline_rc=0 save_rc=0 表示运行和保存成功。
-# 在 AFS 文件管理下载以下目录中的 result.mp4：
+# ==========================================================
+# 3. 运行结束后获取结果
+# ==========================================================
+
+# 终端末行出现 pipeline_rc=0 save_rc=0，表示运行和保存成功。
+# 到 AFS 文件管理中打开：
 # 个人AFS/h3-results/run-时间戳-进程号/
-# generation.log 是推理日志，workflow.log 是全流程日志。
-# invocation.json、native-check.json 记录参数与视频检查；
-# submission-status.json、saved-manifest.json 记录状态与保存清单。
-# 确认结果保存后，释放八卡资源。
-~~~
+#
+# 下载：
+# result.mp4                生成视频
+# generation.log            推理日志
+# workflow.log              环境、编译和推理日志
+# invocation.json           输入及运行参数
+# native-check.json         视频规格检查
+# submission-status.json    运行状态
+# saved-manifest.json       保存清单
+#
+# 确认结果已保存后，释放八卡资源。
+```
 
-默认不加 check。本轮验收将视频下载后在本地运行官方比较器；若需要在八卡流程内比较，使用下节的 check 命令。两种方式无需同时执行。
+## 二、完成情况与后续改进
 
-### 需要官方比较时
+### 1. 完成了什么
 
-把启动命令加上 `check`：
+- 完成 H3 原生 DiT 八卡并行和音频 SnakeBeta 算子适配；条件编码、VAE 等组件继续使用 PyTorch/Diffusers。
+- 完成源码与离线依赖交付，一条命令自动构建、生成视频并保存日志；同节点重试可复用环境和未变化的编译对象。
+- 2026-11-09 实测从零到保存视频 **34分50秒**，全过程无人工修补。视频为 124帧、768×928、24fps，含音轨；下载后运行原版官方比较器，Size、Length 均 PASS，SSIM **96.579%**。
 
-~~~bash
-bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
-~~~
+比较使用历史参考视频（math_bf16、参考端按4个独立 head 分批），没有同轮 PyTorch 加速比；SSIM 不评价音频质量。
 
-`check` 会完成本次完整推理，再与 `reference/reference_fl2va.mp4` 调用原版官方比较器。参考视频直接复用；默认不加 `check` 时只生成和保存视频。两条命令选一条运行。
+### 2. 后续改进
 
-### 结果从哪里拿
+- **数值一致性**：对照条件编码、注意力、音视频潜变量和解码输出，定位两端差异及不同运行间的 SSIM 波动，补充音频波形与听感检查。
+- **算子性能**：针对注意力、矩阵乘和通信开展同输入、同环境对照，数值验证通过后再合入优化。
+- **复现效率**：减少冷编译开销，完善跨节点缓存恢复和失败后增量重试，并补充不同首帧用例的完整验证。
 
-每次自动保存到 **`个人AFS/h3-results/run-时间戳-进程号/`**，终端显示完整路径。到 AFS 文件管理中打开该目录下载：
-
-| 内容 | 本次结果目录内的文件 |
-|---|---|
-| 生成的视频 | `result.mp4` |
-| 推理日志 | `generation.log` |
-| 环境、编译和推理总日志 | `workflow.log` |
-| 输入与完整生成参数 | `invocation.json` |
-| 视频规格与文件记录 | `native-check.json` |
-| 运行状态、保存清单 | `submission-status.json`、`saved-manifest.json` |
-| 官方比较原文，仅 check | `compare/compare.log` |
-| 比较检查结果，仅 check | `evaluation.json` |
-
-退出 0、末行 `pipeline_rc=0 save_rc=0`，且 AFS 中存在 `result.mp4` 和 `saved-manifest.json`，表示生成与保存成功。终端中的节点临时目录不是最终取视频的位置。
-
-### 环境和增量复用
-
-平台需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享模型。默认模型目录为 `/public/home/aclsylqidf/shared/MiniMax-H3`，源码、工具、首帧与参考视频由仓库提供，55 个普通 wheel 由 ZIP 提供。
-
-脚本在节点初始 `workspace` 的同级自动创建 `h3-native-编号/`：`source/` 保存源码和编译对象，`work/` 保存环境和解压依赖。同节点重试复用环境及未变化的编译对象；节点回收后，下次新节点重新构建。AFS 内的源码、ZIP和已保存视频保留。依赖只解压到节点，不额外占用AFS展开空间；AFS仍需有保存本次结果的空间。
-
-标准参数为完整层数、8卡、seed42、50步请求、124帧。更换首帧及模型路径等可选设置见 [REPRODUCE.md](REPRODUCE.md)，完整目录见 [ENVIRONMENT.md](ENVIRONMENT.md)。
+环境目录、换图、可选 check 及依赖维护统一见 [技术补充](REPRODUCE.md)。

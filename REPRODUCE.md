@@ -1,78 +1,92 @@
-# MiniMax-H3 FL2VA 运行说明
+# MiniMax-H3 技术补充
 
-更新时间：2026-11-09T11:12:27+08:00（北京时间）。
+更新时间：2026-11-09T18:36:08+08:00（北京时间）。
 
-## 放文件
+下载、上传、启动与取视频统一见 [README](README.md)。本文只保留环境、可选设置及维护细节，合并原 ENVIRONMENT、PACKAGING、VERSIONS、BASELINE 和“复现与提交说明”。
 
-上传本仓库到 `个人AFS/songshanbei-contest/`，将 `h3-offline-wheels-linux-cp311.zip` 原名放到仓库根目录，与 `run_submission.sh` 同级，无需手工解压。四份工具、输入图和参考视频已随仓库提供。获取和核验依赖见 [PACKAGING.md](PACKAGING.md)。
+## 环境在哪里
 
-## 一行启动
+AFS 保留源码、原始依赖 ZIP 和最终结果。脚本在新终端初始 `workspace` 的同级创建 `h3-native-编号/`：
 
-申请独占 8 卡，打开新 Bash，**在终端初始目录直接执行，无需先cd到AFS**：
-
-~~~bash
-bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
-~~~
-
-需要本次完整生成后运行官方比较，改为：
-
-~~~bash
-bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
-~~~
-
-也可以从新终端初始目录先进入仓库，再运行：
-
-~~~bash
-cd "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest"
-bash run_submission.sh
-~~~
-
-在仓库内需要比较时执行 `bash run_submission.sh check`。脚本从当前或前一个目录识别本节点workspace，自动选择其同级工作目录；若先切换过多个目录，推荐重新打开Bash后使用一行启动命令。
-
-默认流程为：核验离线输入 → 同步节点源码 → 自动解压wheel ZIP到节点盘 → 安装环境 → -j120编译 → 完整生成 → AFS保存。参数保持8卡、完整层数、seed42、50步请求、124帧、Prompt为 `A dog falls asleep`。check在生成完成后调用原版官方比较器，复用已有参考视频。
-
-## 拿结果
-
-每次自动保存到 `个人AFS/h3-results/run-时间戳-进程号/`，完整路径会显示在终端。视频为 `result.mp4`，日志和其他产物见 [README输出表](README.md#结果从哪里拿)。
-
-退出0、末行pipeline_rc=0/save_rc=0，且存在AFS视频及saved-manifest.json才表示生成和保存成功。保存失败时，终端末行提供节点产物位置。
-
-## 默认设置与可选覆盖
-
-标准赛事环境直接使用上述命令即可。默认设置为：
-
-| 设置 | 默认值 |
+| 节点目录 | 内容 |
 |---|---|
-| 个人AFS根 | 平台IFAB_AFS_HOME，未设置时使用HOME |
-| 源码及依赖 | 启动脚本所在目录及同级h3-offline-wheels-linux-cp311.zip；兼容offline-wheels/ |
-| 节点环境 | 当前或前一个workspace的同级h3-native-编号/ |
-| 共享模型 | /public/home/aclsylqidf/shared/MiniMax-H3 |
-| 编译并行数 | 120 |
-| 结果目录 | AFS/h3-results/run-时间戳-进程号/ |
-| 单次保存上限 | 128MiB |
+| `source/` | 从 AFS 同步的源码及编译对象 |
+| `work/venv/`、`work/python/` | Python 入口与已安装依赖 |
+| `work/downloads/` | 从 ZIP 解压的 55 个 wheel |
+| `work/install/` | 本轮构建的原生库 |
+| `work/toolchain/`、`work/xmake/`、`work/jit/` | 编译工具及 JIT 缓存 |
+| `runs/native-时间戳-进程号/` | 本次节点产物，完成后保存到 AFS |
 
-共享模型路径不同时，可在启动前 `export MODEL_PATH=/实际模型路径`。需要指定节点目录时，设置 `H3_NODE_ROOT` 为AFS和workspace之外的节点盘目录；需要固定输出位置时，设置 `H3_AFS_OUTPUT_DIR` 为AFS内尚不存在的新目录。日常运行无需设置这些变量。
+平台提供 Linux x86_64、Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享权重；脚本不安装其他 Torch。无需手工激活环境。新节点需要重新安装和冷编译，同节点、同 AFS 源码目录重试可复用环境和对象；每次使用新的结果目录。
 
-平台需提供Python3.11、Torch2.9.0/HIP6.3、DTK/gfx936和共享权重。容量检查不作为启动前置步骤；结果按单次上限保存，个人AFS仍需有足够可用空间。
+文件完整性采用存在性、大小、mtime、ZIP CRC 和媒体解码检查，不执行 SHA256 校验。来源审计核对模块和原生库路径。源码没有变化时保持 mtime，节点源码存在独立修改时拒绝覆盖；大小及 mtime 均未变的内容替换不在此检查范围内。
 
-## 增量重试
+## 可选设置与换图
 
-相同节点、相同AFS源码目录自动选择同一节点目录，复用环境和对象；每次生成使用新输出目录。未变化的源码不重写，变化文件交给构建系统增量处理。节点源码存在独立修改时拒绝覆盖。
+标准用例无需设置变量。模型路径不同或更换首帧时，可在新终端启动前指定：
 
-节点回收后环境和对象随之回收，新节点重新安装和构建；AFS源码、wheel及已保存结果继续保留。结构见 [ENVIRONMENT.md](ENVIRONMENT.md)。
-
-## 更换测试图片
-
-运行前指定新图片，文件需存在且能解码：
-
-~~~bash
+```bash
+export MODEL_PATH=/实际模型目录
 export FIRST_FRAME="${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/inputs/new_frame.png"
-~~~
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
+```
 
-无需计算或填写 SHA256。Prompt当前固定，其他参数如上。check还需更新 `reference/reference_fl2va.mp4` 和 `reference/case.json`，绑定新图片及新参考视频。登记字段见 [reference说明](reference/README.md)，不能用旧参考视频比较新图片。
+新图片必须存在且能解码。统一首帧 `inputs/first_frame.png` 原样提取自官方报告模板的 `word/media/image1.png`，800×965、1,393,139字节，未缩放或重编码；输出视频尺寸由 pipeline 预处理决定。
 
-运行过程仅执行存在、大小、归档可解压和媒体可解码检查，不执行SHA256校验。增量同步采用大小与mtime，未变化的源码和编译对象不重写。
+Prompt 当前固定为 `A dog falls asleep`，seed42、50步请求、124帧。更换 Prompt 或其他官方参数需要适配并重新验证，不能仅凭换图入口承诺通过。
 
-推荐上传原名ZIP；不需要额外解压命令。已有offline-wheels/目录也可继续使用，两种格式选一种；同时存在且目录中有wheel时优先目录。ZIP和源码留在AFS，解压后的依赖及编译对象仅在节点盘。
+高级变量：`H3_NODE_ROOT` 可指定 AFS/workspace 之外的节点盘目录；`H3_AFS_OUTPUT_DIR` 可指定 AFS 内尚不存在的新结果目录。默认每次保存上限 128MiB，AFS 需有足够空间。
 
-准备阶段使用目录项元数据减少AFS路径查询；正式预检在真实推理进程启动时执行，检查失败会在加载模型前退出。新节点仍从源码冷构建，完整生成参数不变。
+## 可选服务器 check
+
+默认流程生成视频后保存，下载到本地再做官方比较。若确需在服务器生成后比较，使用：
+
+```bash
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
+```
+
+此命令会**重新生成 native 视频**，然后与已有 `reference/reference_fl2va.mp4` 调用未修改的官方比较器，不生成 reference。比较原文为结果目录的 `compare/compare.log`，检查结果为 `evaluation.json`。近期冷验收使用默认入口及本地比较，未重新实测服务器 check。
+
+参考视频仅适用于 `reference/case.json` 对应的图片和参数。换图后做比较，必须同步更换参考视频及登记信息，包括 `first_frame_bytes`、`reference_bytes`、Prompt、seed、requested_steps、num_frames，详见 [参考资产说明](reference/README.md)。不能拿旧参考视频比较新用例。
+
+## 依赖与发布维护
+
+- 55 个普通 wheel 由 [offline-wheel Release](https://github.com/Heking114514/songshanbei-contest/releases/tag/offline-wheel) 分发，ZIP 为 189,769,761字节，解压后共 192,118,057字节。原名放仓库根目录，不在 AFS 解压。
+- 已有散文件也可放 `offline-wheels/`；目录内有 wheel 时优先使用，必须齐全。两种方式选一种，ZIP 不放进该目录。
+- 文件名、版本、下载地址和大小见 [Python依赖锁](requirements/h3_linux_cp311.lock.json)。锁中的历史 SHA 字段不参与运行校验。
+- 4 份工具随源码位于 `third_party/h3/`，包括 HCU FlagTree、clang/lld、xmake；来源、补丁与许可见 [工具说明](third_party/h3/README.md) 和 [工具清单](third_party/h3/manifest.json)。
+- 发布 Release 只需上传 `h3-offline-wheels-linux-cp311.zip`，不必上传 SHA256SUMS。ZIP 内保持 `offline-wheels/文件.whl`，发布前确认成员齐全、大小正确、可完整解压。
+
+维护者需要重新下载散文件时，在**本地源码根目录**用 Python 3.11 或更新版本运行；该步骤只下载，不安装 Linux wheel：
+
+```bash
+python - <<'WHEELS'
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from h3_bootstrap import fetch
+
+wheelhouse = Path("offline-wheels")
+wheelhouse.mkdir(exist_ok=True)
+lock = json.loads(Path("requirements/h3_linux_cp311.lock.json").read_text())
+for wheel in lock["wheels"]:
+    fetch(wheel, wheelhouse)
+print("离线依赖已下载到", wheelhouse.resolve())
+WHEELS
+```
+
+## 实现与源码来源
+
+H3 DiT 使用 InfiniLM/InfiniCore 原生 TP8，注意力采用 math_bf16；音频 SnakeBeta 使用 NineToothed。条件编码、VAE、调度和媒体处理保留 PyTorch/Diffusers。参考端为历史完整 legacy 输出，按4个独立 head 分批；复用参考视频的比较不产生同轮双方加速比。
+
+| 组件 | 整合时来源 commit |
+|---|---|
+| InfiniLM | `79350958fe06f8e7cd7684ff0773ea06d3449a85` |
+| InfiniCore | `5a674e269717adc578c0d599846c9818e6d741fa` |
+| NineToothed 快照 | `6ce8568f8d208ba55afe4a5508bdc9896062b756` |
+
+这些是导入来源，不代表当前运行版本；当前源码版本以 `git rev-parse HEAD` 为准。NineToothed 快照对应的官方上游 commit 未独立核验。
+
+日常算法自验入口为 [run_h3_development.sh](scripts/run_h3_development.sh)，与正式入口分开。历史运行证据保留于 `results/`，各次记录只代表当时版本，不作为当前操作指令。最新实测摘要见 README。
