@@ -62,32 +62,27 @@ def bf16_math():
         raise RuntimeError("BF16 math SDPA settings did not take effect")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--source-root", required=True, type=Path)
-    parser.add_argument("--model-path", required=True, type=Path)
-    parser.add_argument("--first-frame", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--expected-gpus", type=int, default=int(os.environ.get("H3_EXPECTED_GPUS", "8")))
-    args = parser.parse_args()
-    result = dict(passed=False, time=time.time(), source_root=str(args.source_root),
+def run_preflight(source_root, model_path, first_frame, output, expected_gpus):
+    source_root, model_path, first_frame, output = map(
+        Path, (source_root, model_path, first_frame, output))
+    result = dict(passed=False, time=time.time(), source_root=str(source_root),
                   visible_devices={name: os.environ.get(name) for name in (
                       "CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES",
                       "ROCR_VISIBLE_DEVICES", "GPU_DEVICE_ORDINAL")})
     try:
-        source = args.source_root.resolve()
+        source = source_root.resolve()
         official = source / "InfiniLM/examples/minimax_h3_compare.py"
         if not official.is_file() or official.stat().st_size == 0:
             raise RuntimeError("Missing or empty official comparator: " + str(official))
-        if not args.first_frame.is_file() or args.first_frame.stat().st_size == 0:
-            raise RuntimeError("Missing or empty input image: " + str(args.first_frame))
+        if not first_frame.is_file() or first_frame.stat().st_size == 0:
+            raise RuntimeError("Missing or empty input image: " + str(first_frame))
         for child in ("FL2VA", "diffusers"):
-            if not (args.model_path / child).is_dir():
+            if not (model_path / child).is_dir():
                 raise RuntimeError("Missing shared model directory: " + child)
-        result.update(gpu_check(args.expected_gpus))
+        result.update(gpu_check(expected_gpus))
         bf16_math()
         from PIL import Image
-        with Image.open(args.first_frame) as im:
+        with Image.open(first_frame) as im:
             im.load()
             result["input_size"] = list(im.size)
         import numpy as np
@@ -116,7 +111,19 @@ def main():
         result["error"] = repr(error)
         raise
     finally:
-        args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        output.write_text(json.dumps(result, indent=2), encoding="utf-8")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source-root", required=True, type=Path)
+    parser.add_argument("--model-path", required=True, type=Path)
+    parser.add_argument("--first-frame", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--expected-gpus", type=int, default=int(os.environ.get("H3_EXPECTED_GPUS", "8")))
+    args = parser.parse_args()
+    run_preflight(args.source_root, args.model_path, args.first_frame,
+                  args.output, args.expected_gpus)
 
 
 if __name__ == "__main__":

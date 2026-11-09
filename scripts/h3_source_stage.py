@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -44,40 +45,54 @@ def parallel_rows(items, action, label):
 
 
 def source_rows(root):
-    for name in REQUIRED:
-        if not (root / name).is_file():
-            raise RuntimeError("Missing source file: " + name)
-    if not (root / "ninetoothed/src").is_dir():
-        raise RuntimeError("Missing source directory: ninetoothed/src")
-    files = [root / name for name in ROOT_FILES if (root / name).is_file()]
+    root = Path(root).resolve()
+    rows = []
+    def describe(path, info):
+        if not stat.S_ISREG(info.st_mode):
+            raise RuntimeError("Unsafe source path: " + str(path))
+        rows.append(dict(path=path.relative_to(root).as_posix(), size=info.st_size,
+                         source_mtime_ns=info.st_mtime_ns))
+    for name in ROOT_FILES:
+        path = root / name
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            continue
+        describe(path, info)
+    def visit(base, current):
+        # Check each directory before entering it, then reuse scandir metadata
+        # without resolving every ancestor separately for every source file.
+        with os.scandir(current) as entries:
+            for entry in entries:
+                path = Path(entry.path)
+                if entry.is_symlink():
+                    raise RuntimeError("Unsafe source symlink: " + str(path))
+                if entry.is_dir(follow_symlinks=False):
+                    if entry.name in IGNORED_DIRS or (current == base and entry.name == "build"):
+                        continue
+                    visit(base, path)
+                elif (not entry.name.endswith((".pyc", ".pyo", ".so", ".o", ".obj", ".pyd", ".a"))
+                      and ".so." not in entry.name):
+                    describe(path, entry.stat(follow_symlinks=False))
     for name in DIRECTORIES:
         base = root / name
-        if not base.exists():
+        try:
+            info = base.lstat()
+        except FileNotFoundError:
             continue
-        if base.is_symlink():
-            raise RuntimeError("Source symlinks are not supported: " + name)
-        for current, dirs, names in os.walk(base, followlinks=False):
-            current = Path(current)
-            kept = []
-            for child in dirs:
-                path = current / child
-                if child in IGNORED_DIRS or (current == base and child == "build"):
-                    continue
-                if path.is_symlink():
-                    raise RuntimeError("Source symlinks are not supported: " + str(path))
-                kept.append(child)
-            dirs[:] = kept
-            for child in names:
-                if child.endswith((".pyc", ".pyo", ".so", ".o", ".obj", ".pyd", ".a")) or ".so." in child:
-                    continue
-                files.append(current / child)
-    def describe(path):
-        if path.is_symlink() or not path.resolve().is_relative_to(root):
-            raise RuntimeError("Unsafe source path: " + str(path))
-        row = file_row(path, path.relative_to(root).as_posix())
-        row["source_mtime_ns"] = path.stat().st_mtime_ns
-        return row
-    return parallel_rows(sorted(files), describe, "H3_SOURCE_INPUTS_COMPLETE")
+        if not stat.S_ISDIR(info.st_mode):
+            raise RuntimeError("Unsafe source directory: " + name)
+        visit(base, base)
+    rows.sort(key=lambda row: row["path"])
+    names = {row["path"] for row in rows}
+    for name in REQUIRED:
+        if name not in names:
+            raise RuntimeError("Missing source file: " + name)
+    path = root / "ninetoothed/src"
+    if not path.is_dir() or path.is_symlink():
+        raise RuntimeError("Missing source directory: ninetoothed/src")
+    print("H3_SOURCE_INPUTS_COMPLETE", len(rows), len(rows), file=sys.stderr, flush=True)
+    return rows
 
 
 def git_metadata(root):

@@ -47,18 +47,15 @@ worker() (
     heartbeat & heart=$!
     trap 'kill "$heart" 2>/dev/null || true; wait "$heart" 2>/dev/null || true' EXIT
     printf '[%s] H3_FORMAL_BEGIN mode=%s jobs=%s\n' "$(date -u +%FT%TZ)" "$mode" "$BUILD_JOBS"
-    env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u "$TOOLS/h3_bootstrap.py" \
-        stage-wheels --work "$H3_REPRO_WORK" --wheelhouse "$H3_WHEELHOUSE"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" prepare
     export H3_BUILD_AUDIT_OUTPUT="$H3_RUN_DIR/origins.json"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" build
     source "$TOOLS/h3_repro_env.sh"
     python -u "$TOOLS/h3_submission_record.py" begin
-    python -u "$TOOLS/h3_preflight.py" --source-root "$H3_SOURCE_ROOT" \
-        --model-path "$MODEL_PATH" --first-frame "$FIRST_FRAME" --output "$H3_RUN_DIR/preflight.json"
     export H3_COMPARE_BF16_MATH=1
     export PYTHONPATH="$TOOLS/h3_compare_hook:$TOOLS:${PYTHONPATH:-}"
     # Full native generation exactly once. First-use JIT is part of inference.
+    H3_PREFLIGHT_OUTPUT="$H3_RUN_DIR/preflight.json" \
     python -u "$H3_SOURCE_ROOT/InfiniLM/examples/minimax_h3.py" fl2va \
         --model-path "$MODEL_PATH" --first-frame "$FIRST_FRAME" --text "A dog falls asleep" \
         --gpus 0,1,2,3,4,5,6,7 --steps 50 --seed 42 --num-frames 124 \

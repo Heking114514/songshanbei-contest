@@ -306,6 +306,9 @@ def audit(work, output):
         if not origin.is_relative_to(allowed):
             raise RuntimeError("Unexpected package origin: " + name + " " + str(origin))
         modules[name] = dict(path=str(origin), version=getattr(module, "__version__", None))
+    from infinicore.nn.functional import snake_beta_ninetoothed
+    if not callable(snake_beta_ninetoothed):
+        raise RuntimeError("Snake beta Python JIT function is unavailable")
     from triton.backends import backends
     if "hcu" not in backends:
         raise RuntimeError("FlagTree HCU backend absent")

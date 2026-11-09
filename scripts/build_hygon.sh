@@ -96,8 +96,9 @@ cd "$REPO_ROOT/InfiniLM"
 configure_component InfiniLM "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --cxx11-abi="$INFINILM_CXX11_ABI"
 xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" _infinilm
 xmake install -y _infinilm
-printf '[4/5] Register source packages and import native extensions\n'
+printf '[4/5] Register source packages\n'
 export PYTHONPATH="$REPO_ROOT/InfiniCore/python:$REPO_ROOT/InfiniLM/python:$REPO_ROOT/ninetoothed/src:${PYTHONPATH:-}"
+if [ "${BUILD_IMPORT_CHECK:-1}" = 1 ]; then
 "$PYTHON" - <<'PY'
 import infinicore, infinilm
 from infinicore.nn.functional import snake_beta_ninetoothed
@@ -105,4 +106,7 @@ print("INFINICORE",infinicore.__file__)
 print("INFINILM",infinilm.__file__)
 print("SNAKE_BETA",snake_beta_ninetoothed)
 PY
+else
+    printf '[imports] validated by the following build origin audit\n'
+fi
 printf '[5/5] BUILD_COMPLETE\n'

@@ -83,6 +83,10 @@ class WorkflowTests(unittest.TestCase):
         program = """import os,sys,json
 kind=KIND
 phase=sys.argv[1]
+if kind=='generation' and os.environ.get('H3_PREFLIGHT_OUTPUT'):
+    with open(os.environ['TRACE'],'a') as f:
+        f.write(json.dumps(dict(kind='preflight',phase='in-generator',native=None,gpu_check=os.environ['H3_GPU_CHECK_MODE']))+'\\n')
+    if os.environ.get('FAIL_PREFLIGHT'):raise SystemExit(int(os.environ['FAIL_PREFLIGHT']))
 with open(os.environ['TRACE'],'a') as f:
     f.write(json.dumps(dict(kind=kind,phase=phase,native=os.environ.get('H3_INFINILM_VIDEO'),gpu_check=os.environ['H3_GPU_CHECK_MODE']))+'\\n')
 key='FAIL_'+dict(phase=phase,bootstrap=phase,generation='generate',compare='compare',record=phase,delivery=phase).get(kind,phase).upper()
@@ -139,6 +143,35 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         self.assertTrue(all(x["gpu_check"]=="inventory" for x in rows))
         self.assertEqual(rows[-1]["phase"],"persist")
 
+    def test_native_preflight_runs_before_generation_and_offline_stage_is_not_repeated(self):
+        r, rows = self.driver()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        actions = [(x["kind"], x["phase"]) for x in rows]
+        self.assertLess(actions.index(("preflight", "in-generator")), actions.index(("generation", "fl2va")))
+        self.assertEqual(sum(x["kind"] == "preflight" for x in rows), 1)
+        self.assertNotIn(("bootstrap", "stage-wheels"), actions)
+
+    def test_generation_hook_checks_once_and_fails_before_running_script(self):
+        import runpy
+        import types
+        from unittest.mock import Mock
+        hook = ROOT / "scripts/h3_compare_hook/sitecustomize.py"
+        preflight = types.SimpleNamespace(run_preflight=Mock(), gpu_check=Mock(), bf16_math=Mock())
+        settings = dict(H3_COMPARE_BF16_MATH="1", H3_PREFLIGHT_OUTPUT="preflight.json",
+                        H3_SOURCE_ROOT="source", MODEL_PATH="model", FIRST_FRAME="image")
+        with patch.dict(os.environ, settings), patch.object(sys, "argv", ["minimax_h3.py"]), \
+             patch.dict(sys.modules, {"h3_preflight": preflight}):
+            exec(compile(hook.read_text(), str(hook), "exec"), {})
+            preflight.run_preflight.assert_called_once()
+            preflight.gpu_check.assert_not_called()
+            preflight.bf16_math.assert_not_called()
+            preflight.run_preflight.side_effect = RuntimeError("bad input")
+            with patch.object(os, "_exit", side_effect=SystemExit(78)), \
+                 contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    exec(compile(hook.read_text(), str(hook), "exec"), {})
+            self.assertEqual(error.exception.code, 78)
+
     def test_check_generates_native_once_then_compares_existing_reference(self):
         r,rows=self.driver("check")
         self.assertEqual(r.returncode,0,r.stdout+r.stderr)
@@ -150,7 +183,7 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         self.assertLess(actions.index(("compare","compare")),actions.index(("record","check")))
 
     def test_failures_stop_and_save_evidence_without_masking_rc(self):
-        for key,code,no_generation in (("FAIL_BUILD",29,True),("FAIL_AUDIT",37,True),
+        for key,code,no_generation in (("FAIL_BUILD",29,True),("FAIL_AUDIT",37,True),("FAIL_PREFLIGHT",78,True),
                 ("FAIL_GENERATE",43,False),("FAIL_COMPARE",47,False),("FAIL_CHECK",41,False)):
             with self.subTest(key=key):
                 self.trace.unlink(missing_ok=True)

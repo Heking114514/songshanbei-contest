@@ -287,6 +287,19 @@ class SourceStageTests(unittest.TestCase):
             self.run_stage()
         self.assertFalse(self.node.exists())
 
+    def test_directory_symlink_is_rejected_before_any_outside_source_is_read(self):
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "private.cpp").write_bytes(b"keep")
+        link = self.repo / "InfiniCore/external"
+        try:
+            link.symlink_to(outside, target_is_directory=True)
+        except OSError:
+            self.skipTest("Host cannot create symlinks")
+        with self.assertRaisesRegex(RuntimeError, "Unsafe source"):
+            self.run_stage()
+        self.assertFalse(self.node.exists())
+
     def install_launcher(self):
         for name in ("run_submission.sh", "scripts/h3_source_stage.py", "scripts/h3_bootstrap.py",
                      "scripts/h3_delivery.py", "scripts/h3_source_identity.py"):

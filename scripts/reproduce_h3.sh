@@ -29,7 +29,7 @@ worker() {
     mkdir -p "$H3_REPRO_WORK/reports"
     case "$1" in
         build)
-            export BUILD_SKIP_CONFIGURE=0 BUILD_VERBOSE=1
+            export BUILD_SKIP_CONFIGURE=0 BUILD_VERBOSE=1 BUILD_IMPORT_CHECK=0
             bash --noprofile --norc "$TOOLS/build_hygon.sh"
             python -u "$TOOLS/h3_bootstrap.py" audit --work "$H3_REPRO_WORK" \
                 --output "${H3_BUILD_AUDIT_OUTPUT:-$H3_REPRO_WORK/reports/build-origins.json}"
