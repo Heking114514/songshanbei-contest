@@ -1,0 +1,127 @@
+{
+  "id": "d154bb9b74474aeab072b89eb6f20205",
+  "owner": "tree",
+  "pool": "scnet-dcu",
+  "state": "Expired",
+  "reason": "CLEANUP_CONFIRMED",
+  "spec": {
+    "mode": "nodes",
+    "count": 1,
+    "timeout": 1800,
+    "unit_cards": 8,
+    "development": "shell",
+    "credit_card_limit": 8,
+    "provider_unit_bindings": {
+      "unit8:unit8-2": {
+        "version": 1,
+        "profile": "provider-unit-native-v1",
+        "allocation": "d154bb9b74474aeab072b89eb6f20205",
+        "unit_id": "provider-unit/300f076e19e64f2f21419294f5b855e29da6115b695ff4d2c0532c613c3e4bbf",
+        "unit_pin": "322277f5cb32a0016b51a9b8ab149a13036e71fe314296d9b3ad0aaff289c64f",
+        "certificate_sha256": "e6dc0b8830fa806e7f97dbb0e87f0304bffe55ba994b9674de4a30fa240db85d",
+        "boot": "6b49d85d-c1f7-4ee0-a2c7-f1beebab3a61",
+        "lease_domain": "scnet/10.5.16.26",
+        "devices": [
+          "TS6G3813061001",
+          "TS5V1207060601",
+          "TS6G3810010701",
+          "TS5V1206051001",
+          "TS5V0607070301",
+          "TS5V0609080501",
+          "TS5V0605030401",
+          "TS5V0604050601"
+        ]
+      }
+    }
+  },
+  "created": 1794167291.561179,
+  "deadline": 1794169095.3155315,
+  "nodes": [
+    {
+      "node": "unit8:unit8-2",
+      "devices": [
+        "TS6G3813061001",
+        "TS5V1207060601",
+        "TS6G3810010701",
+        "TS5V1206051001",
+        "TS5V0607070301",
+        "TS5V0609080501",
+        "TS5V0605030401",
+        "TS5V0604050601"
+      ],
+      "cleaned": true,
+      "receipt": {
+        "state": "Expired",
+        "reason": "LEASE_DEADLINE",
+        "cleanup_confirmed": true,
+        "resource_scope": "provider-unit",
+        "deadline": 1794169095.3155315,
+        "devices": [
+          "TS6G3813061001",
+          "TS5V1207060601",
+          "TS6G3810010701",
+          "TS5V1206051001",
+          "TS5V0607070301",
+          "TS5V0609080501",
+          "TS5V0605030401",
+          "TS5V0604050601"
+        ],
+        "uid": 230028,
+        "node": "unit8-2",
+        "no_execution": false,
+        "metrics": {
+          "pids": 0,
+          "zombies": 0,
+          "threads": 0,
+          "rss_bytes": 0,
+          "sampled_at": 1794169099.7168455,
+          "memory_enforcement": "Provider cgroup; no platform per-task consumption cap"
+        },
+        "metering": {
+          "version": 1,
+          "attempt": "d154bb9b74474aeab072b89eb6f20205",
+          "boot_id": "6b49d85d-c1f7-4ee0-a2c7-f1beebab3a61",
+          "started_ns": 4194677535746994,
+          "started_at": 1794167295.6829295,
+          "finished_ns": 4196477496198738,
+          "finished_at": 1794169095.6433814
+        },
+        "task": null,
+        "provider_unit_binding": {
+          "version": 1,
+          "profile": "provider-unit-native-v1",
+          "allocation": "d154bb9b74474aeab072b89eb6f20205",
+          "unit_id": "provider-unit/300f076e19e64f2f21419294f5b855e29da6115b695ff4d2c0532c613c3e4bbf",
+          "unit_pin": "322277f5cb32a0016b51a9b8ab149a13036e71fe314296d9b3ad0aaff289c64f",
+          "certificate_sha256": "e6dc0b8830fa806e7f97dbb0e87f0304bffe55ba994b9674de4a30fa240db85d",
+          "boot": "6b49d85d-c1f7-4ee0-a2c7-f1beebab3a61",
+          "lease_domain": "scnet/10.5.16.26",
+          "devices": [
+            "TS6G3813061001",
+            "TS5V1207060601",
+            "TS6G3810010701",
+            "TS5V1206051001",
+            "TS5V0607070301",
+            "TS5V0609080501",
+            "TS5V0605030401",
+            "TS5V0604050601"
+          ]
+        }
+      }
+    }
+  ],
+  "terminals": [
+    {
+      "id": "d35e8606fc5d43e88720af47b708621e",
+      "node": "unit8:unit8-2",
+      "state": "Closed",
+      "retained_until": 1794255495.4108565,
+      "export_error": null,
+      "export_prefix": "shell-d35e8606fc5d43e88720af47b708621e",
+      "archive_state": "Succeeded",
+      "cleanup_seconds": 0.024,
+      "archive_seconds": null,
+      "archive_conflict": false
+    }
+  ]
+}

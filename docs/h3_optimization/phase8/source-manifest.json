@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "created_at": "2026-11-09T01:35:12.444768+08:00",
+  "status": "local_candidate_gpu_not_run",
+  "base": "final-v2 + round2-v4-delta",
+  "files": [
+    {
+      "path": "InfiniLM/csrc/models/minimax_h3/h3_audio_trace.hpp",
+      "sha256": "98f056215a785e518875243d8fa5621646695ec1e648ceaed2bbf85712ab6e01",
+      "before_sha256": null,
+      "bytes": 4389,
+      "change": "added"
+    },
+    {
+      "path": "InfiniLM/csrc/models/minimax_h3/minimax_h3_transformer.cpp",
+      "sha256": "a5cb7120f9484bdf9b66553d6c5a854159de260fe19aec80a59cc0a593d7d806",
+      "before_sha256": "13e4132b67cb9d1bf7304e94406813abd4f0e343ddf79d658824aa1efecaf362",
+      "bytes": 44946,
+      "change": "modified"
+    },
+    {
+      "path": "InfiniLM/examples/minimax_h3.py",
+      "sha256": "1bcbe11fdf95e28e19e33b2287f69da8d315272813c7c65552a16f49338b5f2f",
+      "before_sha256": "f39605a82bc812f83f14850705dc2228788cd8a9584fb1700fdddbd034761733",
+      "bytes": 33006,
+      "change": "modified"
+    },
+    {
+      "path": "InfiniLM/python/infinilm/multimodal/minimax_h3_vae_parallel.py",
+      "sha256": "cc176d815c1e8b83e33319bcc7c0d786311c28f9734f33caf39be0368e70766d",
+      "before_sha256": null,
+      "bytes": 10409,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase7_build_flash.py",
+      "sha256": "7a15c85400ad0180488affacda5ed4c649fcb9b80a541958a87af8e9ae34bf1f",
+      "before_sha256": "1499c766968bbd754753ea699abd397662a4893dd016c25402dccd6078d83274",
+      "bytes": 7111,
+      "change": "modified"
+    },
+    {
+      "path": "scripts/experiments/phase8_attention_tune.py",
+      "sha256": "f9495df5aca8b3ce5f00f5347a5e09cc062fefa3b9810b168d2ca860a77dc5db",
+      "before_sha256": null,
+      "bytes": 10993,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_attention_worker.py",
+      "sha256": "44ec52d3fb457cb870f563ee2b7ee56f3d98052ca5364961748083321b8443fb",
+      "before_sha256": null,
+      "bytes": 8568,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_compare_audio.py",
+      "sha256": "8193abab4288ddbe6dc60437cef3c9035d53727e03aa5c041f69773070c06bf1",
+      "before_sha256": null,
+      "bytes": 8151,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_options.sh",
+      "sha256": "203ff40acca0a97648a0a1d60de0746736ca85e14cf4199b0410ac1bf1529d18",
+      "before_sha256": null,
+      "bytes": 361,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_pipeline.py",
+      "sha256": "75ce4ae7c40e42a222bc258b54a237214f4935f810de2213d932d761668f9fc2",
+      "before_sha256": null,
+      "bytes": 6162,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_replay_audio.py",
+      "sha256": "37aba0bf288f1c744111635c0477efa677b2ad296ce97d44754e5b02dcc444e4",
+      "before_sha256": null,
+      "bytes": 2546,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_replay_vae.py",
+      "sha256": "113b17353c8f5c21ffe86ea992ca3dc516bf78c0934c11d0f661e703ddbbd30d",
+      "before_sha256": null,
+      "bytes": 6937,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_run.sh",
+      "sha256": "1acf3b75d9fd1fcaeac77a9fd3bef27572267cd6eb7b91e98c9f094f65c5ae02",
+      "before_sha256": null,
+      "bytes": 3161,
+      "change": "added"
+    },
+    {
+      "path": "scripts/experiments/phase8_trace.py",
+      "sha256": "7b4113ccb51fe74a7136ffbf3d9a4a4b10a2020d5845b8cb05d22141e594189c",
+      "before_sha256": null,
+      "bytes": 8193,
+      "change": "added"
+    }
+  ],
+  "native_sources_expected": [
+    "InfiniLM/csrc/models/minimax_h3/minimax_h3_transformer.cpp"
+  ],
+  "rebuild_policy": "Restore and zero-compile-check first; exact dependency allowlist, -j120, never clean",
+  "parent_caches": [
+    {
+      "path": "h3-cache/h3-opt-phase67-20261108/final-v2/phase67-final-v2.tar.gz",
+      "sha256": "16ea04b0945dc09f0dc261961316d87b4502f9d4cd40d8e19e29a8ef9c2850ca"
+    },
+    {
+      "path": "h3-cache/h3-opt-phase67-20261108/round2-v4-delta/phase7-round2-v4-delta.tar.gz",
+      "sha256": "44fe1a1445e9476d8fca2327caa3964a43d2803ad2871c4b0f4b26f2033db62e"
+    }
+  ],
+  "baseline_plugin_sha256": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe"
+}

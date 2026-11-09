@@ -1,8 +1,8 @@
 # Version Lock
-> 2026-11-07 19:49:12 +08:00 发布状态：本轮原生 TP8 源码已提交并推送到 codex/eight-card-handover，源码 commit 为 ee93718a59c4c2251aee5a5c5da6c6b33daa085b，匿名 GitHub API 已确认可访问。后续文档修订以分支最新 HEAD 为准。原生正式生成已完成；完整官方 compare 和公开源码构建实测仍待完成。
+> 2026-11-07 19:49:12 +08:00 发布状态：本轮原生 TP8 源码已提交并推送到 codex/eight-card-handover，源码 commit 为 ee93718a59c4c2251aee5a5c5da6c6b33daa085b，匿名 GitHub API 已确认可访问。后续文档修订以分支最新 HEAD 为准。原生正式生成及完整官方compare已完成（SSIM94.277%）；本轮修复尚未纳入新的公开提交，公开版本源码构建实测仍待完成。
 
 
-更新时间：2026-11-07 19:44:41 +08:00（北京时间）。
+更新时间：2026-11-07 21:41:32 +08:00（北京时间）。
 
 本目录是包含三个组件的整合 Git 仓库。当前分支为 `codex/eight-card-handover`，远程为 `https://github.com/Heking114514/songshanbei-contest`；组件子目录没有各自独立的 `.git`。当前发布源码以本仓库的 `git rev-parse HEAD` 为准。
 
@@ -50,8 +50,8 @@ NineToothed 官方来源 commit 尚未核验；本轮没有修改其源码。不
 - 完整模型 TP8：22 帧短冒烟通过；124 帧、50 步请求、seed 42、提示词 `A dog falls asleep` 的正式生成通过。
 - 正式产物：768×928、24 fps、H.264，AAC 双声道 32000 Hz；请求 50 步，调度器实际 49 次 DiT。使用 math BF16 SDPA；该精度配置需随结果披露。
 - 正式视频 SHA-256：`ef0fa80ae779545881c6bc233494c2950c1edc974f0bce985c782582cc19e0ed`。
-- 官方 compare 已启动但因 HIP 检测不到 GPU 而 `SKIPPED`，退出码 2；尚无 legacy 参考视频、SSIM 或全模型数值对齐结论。
-- 新的构建至 compare wrapper、预检和 hook 只经过本地检查，尚未在健康新租约完成端到端验收。CPU pytest 用例不能仅凭语法检查宣称执行通过。
+- 最新完整官方compare退出码0，768×928、124帧均PASS，平均SSIM94.277%；完整legacy参考视频已生成。旧HIP0卡/SKIPPED为历史失败，不能当作当前状态。数值仍有差异，未达逐位一致。
+- 恢复及compare运行wrapper、预检和hook已通过单卡与新八卡实测；首次从源码构建wrapper仍只做静态检查。CPU pytest用例不因语法检查而视为执行通过。
 - 原八卡租约已于 2026-11-07 18:31:51 +08:00 到期；后续运行先确认有效实例，不能以旧 API 的 Active 状态代替 GPU 计算检查。
 
 完整参数、真实结果与恢复条件见 [复现与提交说明.md](复现与提交说明.md)。

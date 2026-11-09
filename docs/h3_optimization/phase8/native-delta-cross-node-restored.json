@@ -1,0 +1,16 @@
+{
+  "complete": true,
+  "delta_sha256": "51b9787b5b09c4c1d37fff062b9d795a76a1d0b5f05e398cb851630fdad38999",
+  "node": "unit8:unit8-2",
+  "sid": "deab818be89d414b81934b390fe4920f",
+  "evidence": "experiments\\h3-opt-20261107-220727\\phase8_validation4\\last-p8v4-restore-result-deab818b.json",
+  "evidence_sha256": "f8e9f7a92126041f3e181d5f6f23e3a696dda9c0dba6f3a988a9c52cb661e732",
+  "zero_compile": {
+    "objects": 1206,
+    "zero_compiles": true,
+    "sha_and_mtime_preserved": true,
+    "native_imports": true
+  },
+  "torch": "2.9.0",
+  "hip": "6.3.26093"
+}

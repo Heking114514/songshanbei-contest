@@ -1,0 +1,202 @@
+#include "h3_flash_abi.h"
+#include <hip/hip_runtime_api.h>
+#include <algorithm>
+#include <climits>
+#include <cmath>
+#include <cstdio>
+#include <map>
+#include <mutex>
+#include <stdexcept>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <new>
+#include <string>
+
+namespace {
+const unsigned char code_object[] = {__CODE_OBJECT_BYTES__};
+constexpr int block_m = __BLOCK_M__;
+constexpr int block_n = __BLOCK_N__;
+constexpr unsigned threads = __THREADS__;
+constexpr unsigned shared_bytes = __SHARED__;
+const char kernel_name[] = "__KERNEL_NAME__";
+const char build_id[] = "__BUILD_ID__";
+
+struct Module {
+    hipModule_t module = nullptr;
+    hipFunction_t function = nullptr;
+};
+struct ModuleCache {
+    std::mutex mutex;
+    std::map<int, Module> devices;
+};
+ModuleCache &module_cache() {
+    // HIP graph executables can retain kernel references after a plan dies.
+    // Keep at most one code module per device alive for the process lifetime;
+    // do not unload it from a GraphOperator destructor or a static destructor.
+    static auto *cache = new ModuleCache;
+    return *cache;
+}
+struct Plan {
+    H3FlashSpec spec{};
+    hipFunction_t function = nullptr;
+    int device = -1;
+    uint64_t span[4]{};
+};
+
+bool span(const H3FlashSpec &s, int tensor, uint64_t &bytes) {
+    const int64_t dimensions[] = {s.batch, tensor == 1 || tensor == 2 ? s.key_tokens : s.query_tokens, s.heads, 128};
+    const auto *strides = s.strides[tensor];
+    if (strides[3] != 1) {
+        return false;
+    }
+    // Supported BSHD or BHSD physical order, including padded QKV slices.
+    const int inner = strides[1] < strides[2] ? 1 : 2;
+    const int outer = inner == 1 ? 2 : 1;
+    if (strides[inner] < 128
+        || strides[inner] > INT64_MAX / dimensions[inner]
+        || strides[outer] < strides[inner] * dimensions[inner]
+        || strides[outer] > INT64_MAX / dimensions[outer]
+        || (s.batch > 1 && strides[0] < strides[outer] * dimensions[outer])) {
+        return false;
+    }
+    uint64_t elements = 1;
+    for (int i = 0; i < 4; ++i) {
+        if (strides[i] <= 0 || dimensions[i] <= 0) {
+            return false;
+        }
+        const uint64_t count = static_cast<uint64_t>(dimensions[i] - 1);
+        const uint64_t step = static_cast<uint64_t>(strides[i]);
+        if (count && step > (static_cast<uint64_t>(INT64_MAX) - elements) / count) {
+            return false;
+        }
+        elements += count * step;
+    }
+    if (elements > static_cast<uint64_t>(INT64_MAX) / 2) {
+        return false;
+    }
+    bytes = elements * 2;
+    return true;
+}
+
+void destroy(void *opaque) {
+    auto *p = static_cast<Plan *>(opaque);
+    if (!p) {
+        return;
+    }
+    delete p;
+}
+
+int prepare(const H3FlashSpec *spec, void **result) {
+    if (!spec || !result) {
+        return 3;
+    }
+    *result = nullptr;
+    if (spec->batch <= 0 || spec->batch > 65535 || spec->heads <= 0 || spec->heads > 65535
+        || spec->query_tokens <= 0 || spec->query_tokens > INT32_MAX
+        || spec->key_tokens <= 0 || spec->key_tokens > INT32_MAX) {
+        return 3;
+    }
+    auto *p = new (std::nothrow) Plan;
+    if (!p) {
+        return 1;
+    }
+    p->spec = *spec;
+    for (int tensor = 0; tensor < 4; ++tensor) {
+        if (!span(*spec, tensor, p->span[tensor])) {
+            delete p;
+            return 3;
+        }
+    }
+    if (hipGetDevice(&p->device) != hipSuccess) {
+        delete p;
+        return 1;
+    }
+    auto &cache = module_cache();
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    auto found = cache.devices.find(p->device);
+    if (found == cache.devices.end()) {
+        hipDeviceProp_t properties{};
+        if (hipGetDeviceProperties(&properties, p->device) != hipSuccess) {
+            delete p;
+            return 1;
+        }
+        const std::string arch(properties.gcnArchName);
+        if (arch.substr(0, arch.find(':')) != "gfx936" || properties.warpSize != 64
+            || threads > static_cast<unsigned>(properties.maxThreadsPerBlock)
+            || shared_bytes > properties.sharedMemPerBlock) {
+            delete p;
+            return 2;
+        }
+        Module value;
+        auto status = hipModuleLoadData(&value.module, code_object);
+        if (status == hipSuccess) {
+            status = hipModuleGetFunction(&value.function, value.module, kernel_name);
+        }
+        if (status != hipSuccess) {
+            // No kernel was published or launched, so failure cleanup is safe.
+            if (value.module) { hipModuleUnload(value.module); }
+            delete p;
+            return 2;
+        }
+        found = cache.devices.emplace(p->device, value).first;
+        std::fprintf(stderr, "H3_FLASH_MODULE_CACHE device=%d loaded_once=true lifetime=process\\n", p->device);
+    }
+    p->function = found->second.function;
+    *result = p;
+    return 0;
+}
+
+int launch(void *opaque, const H3FlashCall *call, void *stream) {
+    auto *p = static_cast<Plan *>(opaque);
+    if (!p || !call || !call->q || !call->k || !call->v || !call->out || !std::isfinite(call->scale)) {
+        return 3;
+    }
+    int device = -1;
+    if (hipGetDevice(&device) != hipSuccess || device != p->device) {
+        return 3;
+    }
+    const void *pointers[] = {call->q, call->k, call->v, call->out};
+    uintptr_t begin[4], end[4];
+    for (int i = 0; i < 4; ++i) {
+        begin[i] = reinterpret_cast<uintptr_t>(pointers[i]);
+        if (begin[i] % 2 || p->span[i] > UINTPTR_MAX - begin[i]) {
+            return 3;
+        }
+        end[i] = begin[i] + p->span[i];
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (begin[i] < end[3] && begin[3] < end[i]) {
+            return 3;
+        }
+    }
+    void *q = const_cast<void *>(call->q);
+    void *k = const_cast<void *>(call->k);
+    void *v = const_cast<void *>(call->v);
+    void *o = call->out;
+    int32_t sq = static_cast<int32_t>(p->spec.query_tokens);
+    int32_t sk = static_cast<int32_t>(p->spec.key_tokens);
+    int32_t heads = static_cast<int32_t>(p->spec.heads);
+    float scale = call->scale;
+    // FlagTree 3.6 appends both scratch pointers even when their sizes are zero.
+    void *global_scratch = nullptr;
+    void *profile_scratch = nullptr;
+    // Exact argument order of the AOT kernel signature and compiler ABI.
+    void *args[] = {&q, &k, &v, &o, &sq, &sk, &heads, &scale,
+        &p->spec.strides[0][0], &p->spec.strides[0][1], &p->spec.strides[0][2],
+        &p->spec.strides[1][0], &p->spec.strides[1][1], &p->spec.strides[1][2],
+        &p->spec.strides[2][0], &p->spec.strides[2][1], &p->spec.strides[2][2],
+        &p->spec.strides[3][0], &p->spec.strides[3][1], &p->spec.strides[3][2],
+        &global_scratch, &profile_scratch};
+    const unsigned grid_x = static_cast<unsigned>((p->spec.query_tokens + block_m - 1) / block_m);
+    const auto status = hipModuleLaunchKernel(p->function, grid_x,
+        static_cast<unsigned>(p->spec.heads), static_cast<unsigned>(p->spec.batch),
+        threads, 1, 1, shared_bytes, static_cast<hipStream_t>(stream), args, nullptr);
+    return status == hipSuccess ? 0 : 1;
+}
+const H3FlashApi api{H3_FLASH_ABI_VERSION, sizeof(H3FlashApi), "gfx936", build_id, &prepare, &launch, &destroy};
+} // namespace
+
+extern "C" __attribute__((visibility("default"))) const H3FlashApi *h3FlashGetApi() {
+    return &api;
+}

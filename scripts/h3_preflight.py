@@ -12,7 +12,10 @@ COMPARE_SHA = "24f3439e11e98d979ec8cee5f76284079dad87cb4668cf0f109b7904e8641bc3"
 INPUT_SHA = "b97c3487ca35da0c803fba3787cf2b7f936d3d4595548ae5b7b576c19934be54"
 
 
-def gpu_check(expected=8):
+def gpu_check(expected=None):
+    expected = int(os.environ.get("H3_EXPECTED_GPUS", "8")) if expected is None else expected
+    if expected < 1:
+        raise ValueError("Expected GPU count must be positive")
     hip = ctypes.CDLL("/opt/dtk/lib/libamdhip64.so")
     hip.hipGetDeviceCount.argtypes = [ctypes.POINTER(ctypes.c_int)]
     hip.hipGetDeviceCount.restype = ctypes.c_int
@@ -23,10 +26,10 @@ def gpu_check(expected=8):
     message = hip.hipGetErrorString(rc)
     print("DIRECT_HIP", rc, message.decode() if message else "", count.value, flush=True)
     if rc != 0 or count.value != expected:
-        raise RuntimeError("HIP must see all 8 GPUs before any model is loaded")
+        raise RuntimeError(f"HIP must see exactly {expected} GPU(s) before any model is loaded")
     import torch
     if not torch.version.hip or torch.cuda.device_count() != expected:
-        raise RuntimeError("Platform HIP Torch must see all 8 GPUs")
+        raise RuntimeError(f"Platform HIP Torch must see exactly {expected} GPU(s)")
     devices = []
     for index in range(expected):
         with torch.cuda.device(index):
@@ -64,6 +67,7 @@ def main():
     parser.add_argument("--model-path", required=True, type=Path)
     parser.add_argument("--first-frame", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--expected-gpus", type=int, default=int(os.environ.get("H3_EXPECTED_GPUS", "8")))
     args = parser.parse_args()
     result = dict(passed=False, time=time.time(), source_root=str(args.source_root),
                   visible_devices={name: os.environ.get(name) for name in (
@@ -80,7 +84,7 @@ def main():
         for child in ("FL2VA", "diffusers"):
             if not (args.model_path / child).is_dir():
                 raise RuntimeError("Missing shared model directory: " + child)
-        result.update(gpu_check())
+        result.update(gpu_check(args.expected_gpus))
         bf16_math()
         from PIL import Image
         with Image.open(args.first_frame) as im:

@@ -1,0 +1,851 @@
+{
+  "complete": true,
+  "at": "2026-11-09T02:19:10.521379+08:00",
+  "afs_writes": false,
+  "archive": "audio8-native-delta-5fd90948.tar.gz",
+  "bytes": 13315314,
+  "sha256": "51b9787b5b09c4c1d37fff062b9d795a76a1d0b5f05e398cb851630fdad38999",
+  "node": "/dev/shm/infinifabric-shell/5fd90948f92a4430b405e5ee5453e170/h3-phase8-audio",
+  "parents": [
+    {
+      "archive": "phase67-final-v2.tar.gz",
+      "sha256": "16ea04b0945dc09f0dc261961316d87b4502f9d4cd40d8e19e29a8ef9c2850ca"
+    },
+    {
+      "archive": "phase7-round2-v4-delta.tar.gz",
+      "sha256": "44fe1a1445e9476d8fca2327caa3964a43d2803ad2871c4b0f4b26f2033db62e"
+    }
+  ],
+  "audit": {
+    "verified_at": "2026-11-09T01:58:40.783192+08:00",
+    "objects_before": 1206,
+    "objects_after": 1206,
+    "changed": [
+      "InfiniLM/build/.objs/_infinilm/linux/x86_64/release/csrc/models/minimax_h3/minimax_h3_transformer.cpp.o"
+    ],
+    "unaffected_preserved": 1205,
+    "scope": "objects/source only; install/library symbols and GPU probes still required"
+  },
+  "files": {
+    "source/InfiniLM/csrc/models/minimax_h3/h3_audio_trace.hpp": {
+      "bytes": 4389,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "98f056215a785e518875243d8fa5621646695ec1e648ceaed2bbf85712ab6e01"
+    },
+    "source/InfiniLM/csrc/models/minimax_h3/minimax_h3_transformer.cpp": {
+      "bytes": 44946,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "a5cb7120f9484bdf9b66553d6c5a854159de260fe19aec80a59cc0a593d7d806"
+    },
+    "source/InfiniLM/examples/minimax_h3.py": {
+      "bytes": 33006,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "1bcbe11fdf95e28e19e33b2287f69da8d315272813c7c65552a16f49338b5f2f"
+    },
+    "source/InfiniLM/python/infinilm/multimodal/minimax_h3_vae_parallel.py": {
+      "bytes": 10409,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "cc176d815c1e8b83e33319bcc7c0d786311c28f9734f33caf39be0368e70766d"
+    },
+    "source/scripts/experiments/phase7_build_flash.py": {
+      "bytes": 7111,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "7a15c85400ad0180488affacda5ed4c649fcb9b80a541958a87af8e9ae34bf1f"
+    },
+    "source/scripts/experiments/phase8_attention_tune.py": {
+      "bytes": 10993,
+      "mtime_ns": 1794160693118564696,
+      "sha256": "f9495df5aca8b3ce5f00f5347a5e09cc062fefa3b9810b168d2ca860a77dc5db"
+    },
+    "source/scripts/experiments/phase8_attention_worker.py": {
+      "bytes": 8568,
+      "mtime_ns": 1794160693122564674,
+      "sha256": "44ec52d3fb457cb870f563ee2b7ee56f3d98052ca5364961748083321b8443fb"
+    },
+    "source/scripts/experiments/phase8_compare_audio.py": {
+      "bytes": 8189,
+      "mtime_ns": 1794161947071509384,
+      "sha256": "8193abab4288ddbe6dc60437cef3c9035d53727e03aa5c041f69773070c06bf1"
+    },
+    "source/scripts/experiments/phase8_options.sh": {
+      "bytes": 361,
+      "mtime_ns": 1794160693122564674,
+      "sha256": "203ff40acca0a97648a0a1d60de0746736ca85e14cf4199b0410ac1bf1529d18"
+    },
+    "source/scripts/experiments/phase8_pipeline.py": {
+      "bytes": 6162,
+      "mtime_ns": 1794160693122564674,
+      "sha256": "75ce4ae7c40e42a222bc258b54a237214f4935f810de2213d932d761668f9fc2"
+    },
+    "source/scripts/experiments/phase8_replay_audio.py": {
+      "bytes": 2546,
+      "mtime_ns": 1794160693122564674,
+      "sha256": "37aba0bf288f1c744111635c0477efa677b2ad296ce97d44754e5b02dcc444e4"
+    },
+    "source/scripts/experiments/phase8_replay_vae.py": {
+      "bytes": 6937,
+      "mtime_ns": 1794160693126564651,
+      "sha256": "113b17353c8f5c21ffe86ea992ca3dc516bf78c0934c11d0f661e703ddbbd30d"
+    },
+    "source/scripts/experiments/phase8_run.sh": {
+      "bytes": 3161,
+      "mtime_ns": 1794160693126564651,
+      "sha256": "1acf3b75d9fd1fcaeac77a9fd3bef27572267cd6eb7b91e98c9f094f65c5ae02"
+    },
+    "source/scripts/experiments/phase8_trace.py": {
+      "bytes": 8193,
+      "mtime_ns": 1794160693126564651,
+      "sha256": "7b4113ccb51fe74a7136ffbf3d9a4a4b10a2020d5845b8cb05d22141e594189c"
+    },
+    "source/InfiniLM/build/.objs/_infinilm/linux/x86_64/release/csrc/models/minimax_h3/minimax_h3_transformer.cpp.o": {
+      "bytes": 6230496,
+      "mtime_ns": 1794160704638499907,
+      "sha256": "433c1131cad5f09b1bbed79a84688e028734f94ac5e5ccb41c4c67f226605f22"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/_infinilm.cpython-311-x86_64-linux-gnu.so.d": {
+      "bytes": 13374,
+      "mtime_ns": 1794160720578410259,
+      "sha256": "de3c121b20cc069c9d0436c0419753cacbb7d62d9d20fb750b2dc62a88a85e31"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/model_factory.cpp.o.d": {
+      "bytes": 41702,
+      "mtime_ns": 1794146202000000000,
+      "sha256": "c71c8270c31c6c4d58cdb07652a152cfa91e3f1dabd6c322c210056134923d5e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/models_registry.cpp.o.d": {
+      "bytes": 1042,
+      "mtime_ns": 1794146196000000000,
+      "sha256": "f47f7b56a96010f51870b3222666ced9847c2da6445b5b3c25f74388f6d8caee"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/infinilm_model.cpp.o.d": {
+      "bytes": 41833,
+      "mtime_ns": 1794146185000000000,
+      "sha256": "f4b43be8ff6f1f3cfccdc452c4a5c40dd407e5421b3b344e206f8b2545f87145"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/videonsa/videonsa_vision.cpp.o.d": {
+      "bytes": 42084,
+      "mtime_ns": 1794146223000000000,
+      "sha256": "15e7d5d59b862a42e2cee90411ab64c049f45578b3683157fe582f54b9a7538c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/videonsa/videonsa_for_conditional_generation.cpp.o.d": {
+      "bytes": 44584,
+      "mtime_ns": 1794146223000000000,
+      "sha256": "f9c887380c7075189a8fd312ab26129931ff92dc86e65e7739731616b94aee3f"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/videonsa/videonsa_attention.cpp.o.d": {
+      "bytes": 44661,
+      "mtime_ns": 1794146222000000000,
+      "sha256": "b3fdc2a5985f7714050a7326d447d083538e3e898a8bb58dbcc2ebc69fb1f5c2"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_vl/qwen3_vl_for_conditional_generation.cpp.o.d": {
+      "bytes": 44859,
+      "mtime_ns": 1794146223000000000,
+      "sha256": "bd3344a246fa9cb5b6b83efc5af52640115b507da1f2576a905a37bc79d74d29"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_vl/qwen3_vl_attention.cpp.o.d": {
+      "bytes": 44343,
+      "mtime_ns": 1794146223000000000,
+      "sha256": "4085f27740829ae4d8c8c35ab8c939c5abea434b66355541873600a33a0d9f4b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_vl/qwen3_vl_text_model.cpp.o.d": {
+      "bytes": 44535,
+      "mtime_ns": 1794146219000000000,
+      "sha256": "22e43f6aa80aefc5e82b159c1838ab5f182cfd56fcc8e927f2bd6b08c1e1cf2a"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_gated_deltanet.cpp.o.d": {
+      "bytes": 44502,
+      "mtime_ns": 1794146221000000000,
+      "sha256": "18652a9a13d230e341653502d6adceec1b2e618159aee838b5b7867c7565746c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_allocate_kv_cache_tensors.cpp.o.d": {
+      "bytes": 42468,
+      "mtime_ns": 1794146221000000000,
+      "sha256": "11168e09311f3b0c972a7851c5a0d104e11fd6eee73acbb970ee51bed9513caa"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_attention.cpp.o.d": {
+      "bytes": 44482,
+      "mtime_ns": 1794146220000000000,
+      "sha256": "3d9b5016c290021719278fb0067ab1b1b9d061318f3e610fb34e239f9a8616dd"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_decoderLayer.cpp.o.d": {
+      "bytes": 45005,
+      "mtime_ns": 1794146219000000000,
+      "sha256": "51a3974562a829b4b98fa9a33e85f4a640692c7ff2a8e17f746c6cbbac0c319a"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_for_causal_lm.cpp.o.d": {
+      "bytes": 45225,
+      "mtime_ns": 1794146217000000000,
+      "sha256": "78bb35ad45eb1c287e893ba8d2005417d3692426d2df8c77d40c8ac29bc85866"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_next/qwen3_next_sparse_moe_block.cpp.o.d": {
+      "bytes": 45225,
+      "mtime_ns": 1794146216000000000,
+      "sha256": "f06e7bd37392e9eb15d51340457840a8931b6765643801f1f208c3110d065f6c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_moe/qwen3_moe_sparse_moe_block.cpp.o.d": {
+      "bytes": 45121,
+      "mtime_ns": 1794146217000000000,
+      "sha256": "6ae170ce55ddcc56cf694ce9d3bba6b3da8e4d4724c092f332ecba94611db17f"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_moe/qwen3_moe_experts.cpp.o.d": {
+      "bytes": 42568,
+      "mtime_ns": 1794146215000000000,
+      "sha256": "0bc1f6a9fba7b7f421846a3ce4ab8bf23315057f9460f2a84ead0941ad569c1f"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_moe/qwen3_moe_topk_router.cpp.o.d": {
+      "bytes": 41534,
+      "mtime_ns": 1794146214000000000,
+      "sha256": "a8eac898d55cb8cf0a5f8efa2721d6db86ad3c6e6cac643fb5a6287235125fbd"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_moe/qwen3_moe_for_causal_lm.cpp.o.d": {
+      "bytes": 45409,
+      "mtime_ns": 1794146211000000000,
+      "sha256": "25481a7f4e22d885a42153446e70778de28416fb9b6b1f4c7639fa0a78a67317"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen2/qwen2_for_causal_lm.cpp.o.d": {
+      "bytes": 44173,
+      "mtime_ns": 1794146210000000000,
+      "sha256": "93044964e03935cc5df23d57ff4758a1e2cafc950e69efc18641aba256ef0e6c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5_moe/qwen3_5_moe_for_causal_lm.cpp.o.d": {
+      "bytes": 46726,
+      "mtime_ns": 1794146214000000000,
+      "sha256": "a07b0855ff2c3c545a5e2a58e7e46feb1c5c917657b72f0fdba127c4abbe9094"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5_moe/qwen3_5_moe_decoder_layer.cpp.o.d": {
+      "bytes": 45718,
+      "mtime_ns": 1794146210000000000,
+      "sha256": "b731c66b75deeeb822d7d5547a15b435d8f7897efb653c86fdf1947981e65f38"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3/qwen3_attention.cpp.o.d": {
+      "bytes": 44115,
+      "mtime_ns": 1794146209000000000,
+      "sha256": "eba46a8e0c21af25aca94e4ed89c0ce3268dd6fe2fcd0c42582bc06cc8285100"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3/qwen3_for_causal_lm.cpp.o.d": {
+      "bytes": 44212,
+      "mtime_ns": 1794146207000000000,
+      "sha256": "5b647f3d94b1ca35d503537689c75aa813feaee5b1c9c267c7aa1c04c770368b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/mistral/mistral_for_causal_lm.cpp.o.d": {
+      "bytes": 44273,
+      "mtime_ns": 1794146207000000000,
+      "sha256": "0ac6ee6e2c39153a140189245bba3fb529d676bf8c21fff1e71c02b7089c59ea"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_for_causal_lm.cpp.o.d": {
+      "bytes": 44684,
+      "mtime_ns": 1794146215000000000,
+      "sha256": "e749e23fbe2fc1641882ee3318951e03ead9dfa5368ec4007b4d419572b79fac"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_vision.cpp.o.d": {
+      "bytes": 44349,
+      "mtime_ns": 1794146214000000000,
+      "sha256": "893b08c61e613252a75bd0963259daf5aadcef0957220875d145cc325bfb3c7a"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_model.cpp.o.d": {
+      "bytes": 44708,
+      "mtime_ns": 1794146211000000000,
+      "sha256": "25fc3e120dee54dc5b9ba8e5546ec3819c3ccbe28fb260473a2e120d81351f4c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_fused_qkv_linear.cpp.o.d": {
+      "bytes": 41730,
+      "mtime_ns": 1794146210000000000,
+      "sha256": "189aa6404b5ba5852b03c4521f454d51323204464caaa33e52661e7da86c4f37"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_attention.cpp.o.d": {
+      "bytes": 44465,
+      "mtime_ns": 1794146209000000000,
+      "sha256": "4fdd5c02f7d9792c1cbc613504c4fc0cba2d3c3a67c531f2475591df260c52a5"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/qwen3_5/qwen3_5_decoderLayer.cpp.o.d": {
+      "bytes": 44957,
+      "mtime_ns": 1794146206000000000,
+      "sha256": "ec02749d68288a666c4c6051aa55faf592370691aaac1bc8b2dfa3074ed8d19c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minimax_h3/minimax_h3_transformer.cpp.o.d": {
+      "bytes": 43740,
+      "mtime_ns": 1794160704654499817,
+      "sha256": "9dece291b35b2abee5ac3a48539d9e8eebbb2cc551370e79e832d37f9f88135c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpmv/resampler.cpp.o.d": {
+      "bytes": 41939,
+      "mtime_ns": 1794146205000000000,
+      "sha256": "f2af9d9ebc5d1e1fd34ec8ab51e70be2020c6b6ed361c88d81bc527dbe4f3021"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpmv/siglip_vision.cpp.o.d": {
+      "bytes": 42891,
+      "mtime_ns": 1794146202000000000,
+      "sha256": "42c62141de3a5137c6cc21a29f79da19a6caa310d4c79008245eaf2549afa6da"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpmv/minicpmv_model.cpp.o.d": {
+      "bytes": 44179,
+      "mtime_ns": 1794146201000000000,
+      "sha256": "2f1b669ede548dfde2cb3dcc2d156283c192d5785acc8574aadd867600107ff0"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm4/minicpm4_for_causal_lm.cpp.o.d": {
+      "bytes": 44323,
+      "mtime_ns": 1794146200000000000,
+      "sha256": "5ea8947d51477fb23362808948a3cb615e3b4f521b485e94f409cae1516605e1"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm_eagle/minicpm_eagle_for_causal_lm.cpp.o.d": {
+      "bytes": 44639,
+      "mtime_ns": 1794146198000000000,
+      "sha256": "8cbd4e8f12bf2a60d24fe2472624d6d891b2cbb416fe170ce5949ec0f3a37bf0"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm_sala/minicpm_sala_decoderLayer.cpp.o.d": {
+      "bytes": 44523,
+      "mtime_ns": 1794146203000000000,
+      "sha256": "5aa7b1aa8406fd5371b1fd7a3e4936242c70f27702a2333886e162bcb058a6be"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm_sala/minicpm_sala_for_causal_lm.cpp.o.d": {
+      "bytes": 44632,
+      "mtime_ns": 1794146203000000000,
+      "sha256": "d64d941eef98eeb01602ea704eef59040b092999fb1aebb2fdaecddc7f0d9bb8"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm_sala/minicpm_sala_attention.cpp.o.d": {
+      "bytes": 44458,
+      "mtime_ns": 1794146198000000000,
+      "sha256": "d866545fce6eba4a37ab5d9553674d1084b56f0493077e88d5d6c8aabe648a0e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/minicpm_sala/minicpm_sala_allocate_kv_cache_tensors.cpp.o.d": {
+      "bytes": 44433,
+      "mtime_ns": 1794146197000000000,
+      "sha256": "5dfab2916f7e9acb95eb81a56297eec3555d2ca1143065bdb1ff719fa2a5bf3b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/llama/llama_for_causal_lm.cpp.o.d": {
+      "bytes": 44173,
+      "mtime_ns": 1794146196000000000,
+      "sha256": "73c38b36e6f6cdf2cd9c7613151bed01a7c58213d4c109cf8ddb484dc5b86480"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/mamba/mamba_for_causal_lm.cpp.o.d": {
+      "bytes": 42679,
+      "mtime_ns": 1794146195000000000,
+      "sha256": "125a3af52c23200bb159f0e7fdc70f8c66c62f49ee19b9e41c4d390427efac3d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_text_model.cpp.o.d": {
+      "bytes": 44129,
+      "mtime_ns": 1794146198000000000,
+      "sha256": "6b2e1347f74aa25a378da3af2428333ce08328a621a5496127b12ec2d2292d55"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_moe.cpp.o.d": {
+      "bytes": 44490,
+      "mtime_ns": 1794146195000000000,
+      "sha256": "d83835864f9c8171efee444babb35952e2d79159b7ac3680633511647f8da603"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_for_conditional_generation.cpp.o.d": {
+      "bytes": 45786,
+      "mtime_ns": 1794146195000000000,
+      "sha256": "16675dabfedb425cc4d7ed13a4923d585ab088ba629f76c50bb4d5a384bcc1e2"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_delta_attention.cpp.o.d": {
+      "bytes": 42794,
+      "mtime_ns": 1794146193000000000,
+      "sha256": "dbd05f9f179cb907da854d6412409d689bc97304a733811b9fb64d2c18c18f12"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_vision.cpp.o.d": {
+      "bytes": 42073,
+      "mtime_ns": 1794146192000000000,
+      "sha256": "1fe0a46196284cda69c0b0281dbfef9f8e5ae31ee3b12986af41510b4b1cb2f3"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_mla_attention.cpp.o.d": {
+      "bytes": 43536,
+      "mtime_ns": 1794146191000000000,
+      "sha256": "17b5e93bf1472f90e7c6fdd076362b68ba8663d4f019759acddf0409e9177c8d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_allocate_cache.cpp.o.d": {
+      "bytes": 42741,
+      "mtime_ns": 1794146189000000000,
+      "sha256": "e6d5a873fdfb8864630407d532994ddf2652a418c89ddc1d91a1f3c7fe101aff"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k3/kimi_k3_decoder_layer.cpp.o.d": {
+      "bytes": 44252,
+      "mtime_ns": 1794146188000000000,
+      "sha256": "58fd9855125becb5502566888ff1ebb31bf6e07ff225b14813da2bda4ad5cde6"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k25/kimi_k25_for_conditional_generation.cpp.o.d": {
+      "bytes": 46031,
+      "mtime_ns": 1794146192000000000,
+      "sha256": "47274c0dd7ca19f18350f9b52f7066cea5423f3fb780e5769f30074bc91c3351"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k25/kimi_k25_decoder_layer.cpp.o.d": {
+      "bytes": 44647,
+      "mtime_ns": 1794146191000000000,
+      "sha256": "90490b855c0f3054405d09869cbbb59b9de669c0c7f20b911248cf88ef2759a9"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k25/kimi_k25_vision.cpp.o.d": {
+      "bytes": 42100,
+      "mtime_ns": 1794146191000000000,
+      "sha256": "3ee1f66d8e05bd892fe9c293370a99e0cb8fb5b625072fc8d5a233ce0554c39b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k25/kimi_k25_moe.cpp.o.d": {
+      "bytes": 45059,
+      "mtime_ns": 1794146190000000000,
+      "sha256": "08a18260843afc622f2c590418f65d152bc6dae0c199f72b8991852c7c2cd834"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/kimi_k25/kimi_k25_attention.cpp.o.d": {
+      "bytes": 43948,
+      "mtime_ns": 1794146187000000000,
+      "sha256": "5f4da79ee8ef23fe89a366252a54e319010087a323d3833ec58e4550bcdf3613"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/gpt2/gpt2_for_causal_lm.cpp.o.d": {
+      "bytes": 43643,
+      "mtime_ns": 1794146186000000000,
+      "sha256": "a9eead4a6d9d50453cda2c3c8ef8ebd3fc966b8cfbd6bbb45b7d58080bdcb305"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/internlm3/internlm3_for_causal_lm.cpp.o.d": {
+      "bytes": 44798,
+      "mtime_ns": 1794146184000000000,
+      "sha256": "877c858b698f1d65f216bedd352f9e4064f489519b7ed4d398205c2c93bba166"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/glm4/glm4_decoder_layer.cpp.o.d": {
+      "bytes": 43844,
+      "mtime_ns": 1794146186000000000,
+      "sha256": "65ccb4ad29db913cb1c897d0ec0149d6cb7df69a7a337d84708f6ae04451c02c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/glm4/glm4_for_causal_lm.cpp.o.d": {
+      "bytes": 43926,
+      "mtime_ns": 1794146182000000000,
+      "sha256": "120fd17d35cde8d98a6ea820a826450d2b272a24d14be55eafcb4471f897f832"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/fm9g/fm9g_for_causal_lm.cpp.o.d": {
+      "bytes": 44123,
+      "mtime_ns": 1794146181000000000,
+      "sha256": "793aa6409221fa00741f75005fd5642f4c00b4c367d445850ef58984f55e21a4"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_for_causal_lm.cpp.o.d": {
+      "bytes": 44820,
+      "mtime_ns": 1794146184000000000,
+      "sha256": "b972eae2e67e03047b7bd2e3dd74fa5fd4a174cfb156936c92d53ff64afdff21"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_moe.cpp.o.d": {
+      "bytes": 44373,
+      "mtime_ns": 1794146183000000000,
+      "sha256": "d058f73355b334bf015587e0f59061900a924300160634ee50e4cdb23fb99d46"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_model.cpp.o.d": {
+      "bytes": 44696,
+      "mtime_ns": 1794146181000000000,
+      "sha256": "69d70558e411b134dd3cdb692f26478a560d25abfeb802c81b415b54c597ac76"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_decoder_layer.cpp.o.d": {
+      "bytes": 44503,
+      "mtime_ns": 1794146181000000000,
+      "sha256": "a4dcc7a3647c7e5b4e43c97365003ebdb865da239f00ca5d19ee8690c45a6b7a"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_vision.cpp.o.d": {
+      "bytes": 44757,
+      "mtime_ns": 1794146180000000000,
+      "sha256": "5143e48c7475f3bcb07dae69a52297277c9ed8cbb0247719b2d1c139a5bf2315"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/ernie4_5_vl/ernie4_5_attention.cpp.o.d": {
+      "bytes": 44239,
+      "mtime_ns": 1794146179000000000,
+      "sha256": "5994123569375e72e789d2a5de7b55e92af4950582803fcbc0da6712feb97c34"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_moe.cpp.o.d": {
+      "bytes": 44348,
+      "mtime_ns": 1794146180000000000,
+      "sha256": "3b7a8239a7affc0ae107076648ddf5e96696a5ba7390285a09c24c138e03c15c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_mla_attention.cpp.o.d": {
+      "bytes": 44059,
+      "mtime_ns": 1794146179000000000,
+      "sha256": "1e3f5c966d62a6ae579954be06f7c519ae5223057c256b32d7767fb0ed6c437b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_for_causal_lm.cpp.o.d": {
+      "bytes": 44229,
+      "mtime_ns": 1794146179000000000,
+      "sha256": "ba77fff44bf2c3d53eba5d3c8841a19b06b0c25de222463b3017abf3307089a3"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_decoder_layer.cpp.o.d": {
+      "bytes": 44479,
+      "mtime_ns": 1794146176000000000,
+      "sha256": "c49322307b4c4c8c020b0630dde151684849bd6abcd6e75f35cfaa069532a575"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_attention.cpp.o.d": {
+      "bytes": 44068,
+      "mtime_ns": 1794146176000000000,
+      "sha256": "74486a17128a5298791961d1e9ffd0724a44d609ae87488c6c9a75307ba9e03f"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek_v2/deepseek_v2_allocate_kv_cache_tensors.cpp.o.d": {
+      "bytes": 44217,
+      "mtime_ns": 1794146175000000000,
+      "sha256": "27ce444c5d724bde93d4d1027d1f8456e2f9334ac1ede1a2caf60cfa7b1c721d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek/deepseek_for_causal_lm.cpp.o.d": {
+      "bytes": 44502,
+      "mtime_ns": 1794146177000000000,
+      "sha256": "f45be6a4a190db6809a1156226e1cfa9a7279059b8cdbd4c21865cb2925c8d2a"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/deepseek/deepseek_decoder_layer.cpp.o.d": {
+      "bytes": 44340,
+      "mtime_ns": 1794146174000000000,
+      "sha256": "a01e1fadc299d92be298bd4a123d3d248dc0561a7e99da20bcd658e65de6d667"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/baichuan/baichuan_for_causal_lm.cpp.o.d": {
+      "bytes": 44747,
+      "mtime_ns": 1794146174000000000,
+      "sha256": "f083e3f79c810b4e8c9e449faa003de84e05eb3145e6f15beb61dbb2da8cd52e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/models/chatglm/chatglm_for_causal_lm.cpp.o.d": {
+      "bytes": 44273,
+      "mtime_ns": 1794146173000000000,
+      "sha256": "77c0ea051444bc434eea3d0294f6ffa707a125b9eaf12c060dc37ff0d793218e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/pybind11/bindings.cc.o.d": {
+      "bytes": 50726,
+      "mtime_ns": 1794146165000000000,
+      "sha256": "ed5012afeddf334c94de602097cff1eeef85a7d119d97ce4384f4f40b16ac6ec"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/cache/mamba_cache.cpp.o.d": {
+      "bytes": 42257,
+      "mtime_ns": 1794146155000000000,
+      "sha256": "6d7c28960a9006f2ed7aaee3bab81c669b9b1c5ecaac78fe67288a9ef7d6f2ed"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/cache/kv_cache.cpp.o.d": {
+      "bytes": 42185,
+      "mtime_ns": 1794146154000000000,
+      "sha256": "61cc1008313b19a3dd168f41495c15d7ae6b9bf754f5c958ff68ed533d724c65"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/config/model_config.cpp.o.d": {
+      "bytes": 41105,
+      "mtime_ns": 1794146157000000000,
+      "sha256": "c4d8355010e007bf14bee8b64020845a96caab18ae8e5ea0dd296b211798eb32"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/config/config_factory.cpp.o.d": {
+      "bytes": 41185,
+      "mtime_ns": 1794146154000000000,
+      "sha256": "02d29dcd4c481fd78f17cd03fedf23b96f10cf1f2154a90f60b97822a8070a47"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/config/quant_config.cpp.o.d": {
+      "bytes": 27681,
+      "mtime_ns": 1794146150000000000,
+      "sha256": "4cf60021495be29832d8dc90c8c42402302e48f84576881390d3c726c13a5ad4"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/debug_utils/hooks.cpp.o.d": {
+      "bytes": 26019,
+      "mtime_ns": 1794146147000000000,
+      "sha256": "fc0f04c0d5b17b63b5f18b66a2458538631920f488d39c4bbe78d78ff4051dcf"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/global_state/global_state.cpp.o.d": {
+      "bytes": 42159,
+      "mtime_ns": 1794146140000000000,
+      "sha256": "3a44685cf020d508e46848d5c4302a44a58fd1d82d27b3545faf59d4b3154c99"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/rank_worker.cpp.o.d": {
+      "bytes": 42138,
+      "mtime_ns": 1794146146000000000,
+      "sha256": "a67675735f0743ac5460fcbc0116b5476ed2028c962effb437040d9a59e6d8d6"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/infer_engine.cpp.o.d": {
+      "bytes": 42364,
+      "mtime_ns": 1794146143000000000,
+      "sha256": "2cae0b583b874d78fa0f63072b9ce9f8634ef79b33f22de03b7e2fff41ba7b08"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/rank_barrier.cpp.o.d": {
+      "bytes": 797,
+      "mtime_ns": 1794146135000000000,
+      "sha256": "b998924ada8d2ac6049ee428d9335b9182dd3756959b7295d9b884993fa0cedd"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/compiler/general_compiler.cpp.o.d": {
+      "bytes": 42379,
+      "mtime_ns": 1794146145000000000,
+      "sha256": "3f6566e58b9049d48c939e6370d81eb644fb5acd95044f83deb485bfb314ad0c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/compiler/static_batching_compiler.cpp.o.d": {
+      "bytes": 42559,
+      "mtime_ns": 1794146145000000000,
+      "sha256": "02e7800501ea51e991e0207fd22a4b5cf14c81264faae84913359fef9ce6b626"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/compiler/paged_compiler.cpp.o.d": {
+      "bytes": 42519,
+      "mtime_ns": 1794146143000000000,
+      "sha256": "42c48fd0a1d3eb15327872a5f79f57c7d10df3c7fc96cb7f72e5c6d63da0042b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/distributed/communication_group.cpp.o.d": {
+      "bytes": 27002,
+      "mtime_ns": 1794146142000000000,
+      "sha256": "051ae388331164b4b392b7f6bdf77e24bc330ba4a1c29f4cf3ee3b65c76ba523"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/distributed/tcp_rendezvous.cpp.o.d": {
+      "bytes": 2895,
+      "mtime_ns": 1794146139000000000,
+      "sha256": "b01e18345725f0106130bbc2c9502e434ff414cceec29950494b58fda935843c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/engine/distributed/dist_config.cpp.o.d": {
+      "bytes": 842,
+      "mtime_ns": 1794146133000000000,
+      "sha256": "21cbcb2c5188c05b886e898996033641a78e85c228d659ce483f272d886615cc"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/rotary_embedding/rotary_embedding_factory.cpp.o.d": {
+      "bytes": 41728,
+      "mtime_ns": 1794146171000000000,
+      "sha256": "e56ee94e6fa58d8edcabcd83434a16ef91d5170201880a9201bf860687f36ff4"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/rotary_embedding/rope_scaling_creators.cpp.o.d": {
+      "bytes": 41663,
+      "mtime_ns": 1794146170000000000,
+      "sha256": "f19b2ce6a465926cc76574ef9f11a709f43e96c74d57b09a8465d2efc6cd9f1e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/rotary_embedding/rotary_embedding.cpp.o.d": {
+      "bytes": 41755,
+      "mtime_ns": 1794146170000000000,
+      "sha256": "be9b6f5e7b3f03523a3a4ebd1f94e288ccbef0d460c52183c8b7b43192eb3235"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/none_quantization.cpp.o.d": {
+      "bytes": 42648,
+      "mtime_ns": 1794146172000000000,
+      "sha256": "9de15571a9a8d42037908337eb28f8052908e13e069877c1467c78cf67fa3335"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/gptq_qy.cpp.o.d": {
+      "bytes": 40775,
+      "mtime_ns": 1794146169000000000,
+      "sha256": "26c24df7d0e8a15f5bd03c3a03490a6b7e9a181fc0bdc8658332a70658ff20ba"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/compressed_tensors.cpp.o.d": {
+      "bytes": 27776,
+      "mtime_ns": 1794146168000000000,
+      "sha256": "9a0eef9bd94c41272e4d6ed670f18691988b3499f4b67be6c2768b8d337aae2e"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/mxfp4.cpp.o.d": {
+      "bytes": 27593,
+      "mtime_ns": 1794146166000000000,
+      "sha256": "33511d70d2a52c3429e0a41fa380513e4e7646fcce3d988a846207eecaed7bb8"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/gptq.cpp.o.d": {
+      "bytes": 26972,
+      "mtime_ns": 1794146166000000000,
+      "sha256": "39c67485c4436d644b51260ccfe8665a8365e27b1c217bcce15850038e736ff2"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/gptq_marlin.cpp.o.d": {
+      "bytes": 27861,
+      "mtime_ns": 1794146165000000000,
+      "sha256": "2745c364c36b78f3c35edb406465a59e41ea1dcf0efc51a65fe71294b595a927"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/awq.cpp.o.d": {
+      "bytes": 27739,
+      "mtime_ns": 1794146163000000000,
+      "sha256": "12131a5c7f08a8df213686e21d8f6c9842c7a613491aa27017d8d848a16b1a0b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/base_quantization.cpp.o.d": {
+      "bytes": 27663,
+      "mtime_ns": 1794146163000000000,
+      "sha256": "a8a25dcf42f6a96e6b82c479232feb6a4bba2fba3905bde95a778cd4648cb125"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/awq_marlin.cpp.o.d": {
+      "bytes": 27857,
+      "mtime_ns": 1794146163000000000,
+      "sha256": "04b70ad89188a7707e33231e8b92341287bce0cf8d94a3fccf896a99338fad09"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/kv_quant.cpp.o.d": {
+      "bytes": 25117,
+      "mtime_ns": 1794146161000000000,
+      "sha256": "19cf35c818b159b1fc5f9cce0637ebe6790f62d7e34cbca12b38f69793945c6b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/quantization/marlin_utils.cpp.o.d": {
+      "bytes": 24838,
+      "mtime_ns": 1794146159000000000,
+      "sha256": "3c824acb6d4b6baf0639261856603ee6562ffc3c133b70e222075bf308a0e7dd"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/mlp/mlp.cpp.o.d": {
+      "bytes": 42284,
+      "mtime_ns": 1794146154000000000,
+      "sha256": "c32865da8a19d59ccecd400cde3f78ba218f069cc69cd32bd00eb097d60dd6aa"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/linear/linear.cpp.o.d": {
+      "bytes": 41286,
+      "mtime_ns": 1794146157000000000,
+      "sha256": "73a78aef54402ca20aa0faa61e99fca1dac72ae5b9c46a87173c346e44080c2d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/linear/fused_linear.cpp.o.d": {
+      "bytes": 41307,
+      "mtime_ns": 1794146156000000000,
+      "sha256": "1d86b70582d5567eda36bdf55aea396653a47f251abf505bad6b5e2ceb972efe"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/linear/base_linear.cpp.o.d": {
+      "bytes": 41103,
+      "mtime_ns": 1794146150000000000,
+      "sha256": "9b80a1d5053b336bc431b9dea65274b9c0fbb6b80ae769705edb2594a3b2582f"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/attention/attention.cpp.o.d": {
+      "bytes": 42862,
+      "mtime_ns": 1794146145000000000,
+      "sha256": "c77d31d229c658ba24b7ee45f3d0d5548c1fc22b8e32f1650ce38058f9ebcc95"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/attention/backends/flash_attn.cpp.o.d": {
+      "bytes": 43409,
+      "mtime_ns": 1794146149000000000,
+      "sha256": "fd1cdbf8ba9e05d2580f4c29bc6e38aedece6c8fca3105d159528f7d336ffedd"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/attention/backends/static_attn.cpp.o.d": {
+      "bytes": 43374,
+      "mtime_ns": 1794146148000000000,
+      "sha256": "64bc39991d364590f1ed390edfd1becc78e6ed01c09cc548991ade82450aa2ce"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/attention/backends/attention_layer.cpp.o.d": {
+      "bytes": 43360,
+      "mtime_ns": 1794146147000000000,
+      "sha256": "ec05730a3654312926ea4a2b881e0844688bbebdb80826436cc37c3e5ecf10db"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/attention/backends/paged_attn.cpp.o.d": {
+      "bytes": 43150,
+      "mtime_ns": 1794146146000000000,
+      "sha256": "3cbcfcb38e9734ffe5738853e433dae1a21b66c4e5ec98e677abc2df27add00d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/fused_moe.cpp.o.d": {
+      "bytes": 41935,
+      "mtime_ns": 1794146162000000000,
+      "sha256": "8df66e026dff3d64a2285833634f01e9a09ab7ab76cc17463ec14375b1186a4b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/sparse_moe_block.cpp.o.d": {
+      "bytes": 44209,
+      "mtime_ns": 1794146161000000000,
+      "sha256": "0f1fd4208a1e29eb177e2057f6204b98135c8c7f97c3cf21f07364ea4cb8160d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/router/topk_router.cpp.o.d": {
+      "bytes": 43939,
+      "mtime_ns": 1794146164000000000,
+      "sha256": "0b03485e292bda85c1c6d001451202ec2c761a780771e5c2ab5302491f8f2f4c"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/experts/fused_moe_experts.cpp.o.d": {
+      "bytes": 42687,
+      "mtime_ns": 1794146162000000000,
+      "sha256": "e0c014e57512f8b4b82dac9cc911498be73f0f5ebe22d9324bef1de7b499bc02"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/legacy/moe_mlp.cpp.o.d": {
+      "bytes": 42618,
+      "mtime_ns": 1794146162000000000,
+      "sha256": "8ef0f20b0b6ed2243cba91c83973c4383b0da606da60f2f165897124bc9fb40d"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/runner/cuda_fused_moe_runner.cpp.o.d": {
+      "bytes": 25220,
+      "mtime_ns": 1794146155000000000,
+      "sha256": "c9789248e08fe73c123a424663f96360c4486d5e3acfbb81cc323dea65202ad7"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/ep/ep_config.cpp.o.d": {
+      "bytes": 42785,
+      "mtime_ns": 1794146161000000000,
+      "sha256": "c7a11b6c6c1f1ee374c214a712bb19c10c1deece3b7b488cb187985e02153182"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/ep/base_ep_dispatcher.cpp.o.d": {
+      "bytes": 25264,
+      "mtime_ns": 1794146151000000000,
+      "sha256": "e7ed05987e19d1d03a8711e66f74ca49d9e9fa822823a9a8f90dff2cdd9d732b"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/ep/deepep_dispatcher.cpp.o.d": {
+      "bytes": 24241,
+      "mtime_ns": 1794146151000000000,
+      "sha256": "07fa72fce87544349d428de6215e07fbefeffc7620918b304910af898196e928"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/ep/local_allreduce_dispatcher.cpp.o.d": {
+      "bytes": 25507,
+      "mtime_ns": 1794146149000000000,
+      "sha256": "666a4acf31ce85131ce717cd99c53006d9a948ca7d2984d8a88db02f6c865b32"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/ep/allgather_reduce_scatter_dispatcher.cpp.o.d": {
+      "bytes": 25645,
+      "mtime_ns": 1794146149000000000,
+      "sha256": "489d7a00beb9ff98f4f5ed1ce5630f9a909d04bba1cd6cb0ea8a63e085e728ee"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/dispatcher/dispatcher_factory.cpp.o.d": {
+      "bytes": 24910,
+      "mtime_ns": 1794146144000000000,
+      "sha256": "be7cfce7247f7ddf2508335595604dd19cf2c4ab93c9acf09e081401b6fcdca1"
+    },
+    "source/InfiniLM/build/.deps/_infinilm/linux/x86_64/release/csrc/layers/moe/dispatcher/standard_dispatcher.cpp.o.d": {
+      "bytes": 25714,
+      "mtime_ns": 1794146132000000000,
+      "sha256": "7e381ac017ad31c243e4db3baa1b6786bfadd93fd3077fabf14efb87540b2ccb"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/xmake.conf": {
+      "bytes": 415,
+      "mtime_ns": 1794146112000000000,
+      "sha256": "4cd49befc828acda350979633bc6414e2dbb3c52c414cd42bc4aef38f8e896bc"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/project.lock": {
+      "bytes": 0,
+      "mtime_ns": 1794146111000000000,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/history": {
+      "bytes": 898,
+      "mtime_ns": 1794160693498562559,
+      "sha256": "3711dc40a18c089b346a86782f2ffb4a4efb785aca057205b3ba764838861e50"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/toolchain": {
+      "bytes": 2724,
+      "mtime_ns": 1794160720594410169,
+      "sha256": "2a24328a4048e6d46f84dd6f557312bbb44ca8d08b16ff1cdd9ca76873eb1bfa"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/detect": {
+      "bytes": 11022,
+      "mtime_ns": 1794160720598410147,
+      "sha256": "7b065f2a7e4e926929214d7b66b3a1e7ae76e4397ccf1e65f7013b5967324326"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/option": {
+      "bytes": 846,
+      "mtime_ns": 1794146111000000000,
+      "sha256": "a353eaf1787f20bd5f62ea1c08d8ac8d8d0ed65e314786fd7c3ac0b18214e5d7"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/project": {
+      "bytes": 3,
+      "mtime_ns": 1794146111000000000,
+      "sha256": "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/package": {
+      "bytes": 3,
+      "mtime_ns": 1794146111000000000,
+      "sha256": "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a"
+    },
+    "source/InfiniLM/.xmake/linux/x86_64/cache/config": {
+      "bytes": 181,
+      "mtime_ns": 1794160693822560737,
+      "sha256": "2810dae36fceb2b922f3742692b3678c3151588a98bd31427008fa44c9a072b1"
+    },
+    "source/InfiniLM/build/linux/x86_64/release/_infinilm.cpython-311-x86_64-linux-gnu.so": {
+      "bytes": 23973200,
+      "mtime_ns": 1794160720482410799,
+      "sha256": "6cef104de5e3f6d09eca9dabec50b0111baf5ca1bbf5ea56a236c9eb62f73b40"
+    },
+    "work/install/lib/_infinilm.cpython-311-x86_64-linux-gnu.so": {
+      "bytes": 23973200,
+      "mtime_ns": 1794160720482410799,
+      "sha256": "6cef104de5e3f6d09eca9dabec50b0111baf5ca1bbf5ea56a236c9eb62f73b40"
+    },
+    "phase8-incremental/incremental-result.json": {
+      "bytes": 358,
+      "mtime_ns": 1794160721618404410,
+      "sha256": "cf95cf7a022244f49c66db3c59c6e9319eca2c6dbd964c3797fcefde01416e2a"
+    },
+    "phase8-incremental/build-plan.json": {
+      "bytes": 1058,
+      "mtime_ns": 1794160693126564651,
+      "sha256": "9f8c31228aede0392ee321ab0e56fe4c939fbcd32c3cd90005a7f52a0e9aa725"
+    },
+    "phase8-incremental/allow-candidate.txt": {
+      "bytes": 50,
+      "mtime_ns": 1794160693126564651,
+      "sha256": "e1525c7a93aa844ea773bef4fe3e245bbb9ebfba923e4f945aca6e0e99dcb6b5"
+    },
+    "phase8-incremental/objects-before.json": {
+      "bytes": 288486,
+      "mtime_ns": 1794160691858571782,
+      "sha256": "304e8003b8c56b94b3c2d0e36e028068f45d38693705ed04977a1e5f2cd6fc0b"
+    },
+    "trace-library.json": {
+      "bytes": 243,
+      "mtime_ns": 1794160721810403331,
+      "sha256": "6a7d587e5478617861261da33ed10816eed80158a0a5caa94da59b838fe05bfb"
+    },
+    "source-final.json": {
+      "bytes": 1444955,
+      "mtime_ns": 1794161949415496139,
+      "sha256": "936252b8682213e7d99d1e8e54c7fcdeb2c284e100a1cdc7fbbd2a630acf4c1d"
+    },
+    "source/.h3-source.json": {
+      "bytes": 1444955,
+      "mtime_ns": 1794161949459495890,
+      "sha256": "936252b8682213e7d99d1e8e54c7fcdeb2c284e100a1cdc7fbbd2a630acf4c1d"
+    }
+  }
+}

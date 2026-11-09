@@ -1,8 +1,8 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-本仓库包含 InfiniLM、InfiniCore、NineToothed。完整H3原生TP8的124帧/50步FL2VA已成功生成；官方compare已执行，但参考进程因HIP检测不到GPU失败，报告SKIPPED，尚无SSIM结论。
+本仓库包含 InfiniLM、InfiniCore、NineToothed。完整H3原生TP8的124帧/50步FL2VA已生成；完整官方compare现已完成，rc=0，768×928尺寸及124帧双方均PASS，平均SSIM94.277%。更新：2026-11-07 21:41:32 +08:00。
 
-**官方模板逐项核对记录保存在本地工作区 handover/官方模板逐项核对.md，不随源码仓库发布。** 本轮源码已公开提交为 [ee93718](https://github.com/Heking114514/songshanbei-contest/commit/ee93718a59c4c2251aee5a5c5da6c6b33daa085b)；当前仍缺完整 compare 和评审从源码构建的实测闭环。
+**官方模板逐项核对记录保存在本地工作区 handover/官方模板逐项核对.md，不随源码仓库发布。** 本轮源码已公开提交为 [ee93718](https://github.com/Heking114514/songshanbei-contest/commit/ee93718a59c4c2251aee5a5c5da6c6b33daa085b)；本轮compare修复仍在工作区，需形成最终公开版本并完成评审从该版本源码构建的实测闭环。
 
 **复现与官方提交材料见 [复现与提交说明.md](复现与提交说明.md)**，包括统一图片/提示词、-j120源码构建到运行、已编译资产恢复、真实compare输出及失败分析。组件来源见 `BASELINE.md` 与 `VERSIONS.md`。
 
@@ -78,10 +78,10 @@ git status --short --branch
 
 - 已完成：H3原生构建；1194对象跨租约零重编、单文件增量验证；单卡接口修复；运行包换目录零JIT恢复；八卡22帧冒烟；完整模型TP8正式124帧/50步请求生成与媒体回收校验。
 - 正式配置：统一图片、A dog falls asleep、seed42、默认分辨率768×928、24fps、math_bf16。原生正式视频证据见 `../handover/results/h3-formal-20261107T0956/`。
-- 未完成：legacy完整参考生成、官方SSIM/差异比较、全模型参考数值对齐。已跑compare返回2，参考进程在导入设备层失败，没有开始加载模型。
-- 下一次使用健康八卡会话，先直接HIP/Torch/逐卡计算预检，再用未修改官方compare补跑参考。平台Active不能替代GPU实测。
+- 完整比较已完成：legacy参考生成成功、官方平均SSIM94.277%，Size/Length PASS。仍有数值差异，不能称逐位一致；模板未规定SSIM合格阈值。
+- 本轮新八卡已通过父/子进程HIP、Torch及逐卡计算检查后完成reference与compare。原先HIP0卡失败保留为历史证据。
 - 当前资产直接恢复即可，不需要重编或pip。首次源码构建入口 `scripts/build_and_compare_h3.sh` 使用-j120；该新wrapper只经过本地检查，尚未新租约端到端验收。
-- `scripts/run_h3_compare.sh`统一BF16 math配置和预检。resume可通过官方provided参数复用native视频，但该侧本轮性能为n/a；正式性能用full重新生成双方。
+- `scripts/run_h3_compare.sh`统一BF16 math配置和预检。resume可通过官方provided参数复用native视频，但该侧本轮性能为n/a；本轮不计算双方加速比；另做full性能实验需先安排足够时长，已知reference约50分钟加native约10分钟及预检/保存，当前一小时租约预算偏紧。
 - `scripts/run_h3_smoke.sh`已改为22帧/256×256/2步，仅短冒烟启用时长override，正式compare不启用。
 - 所有命令仅Git Bash执行、完整脚本整体base64。AFS用量只查专门API，保留4GiB上限与容量余量。
 
