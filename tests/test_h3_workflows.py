@@ -151,6 +151,45 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         self.assertEqual(sum(x["kind"] == "preflight" for x in rows), 1)
         self.assertNotIn(("bootstrap", "stage-wheels"), actions)
 
+    def test_real_native_entry_runs_preflight_without_sitecustomize(self):
+        import ast
+        import types
+        from unittest.mock import Mock
+        source = ROOT / "InfiniLM/examples/minimax_h3.py"
+        main = next(n for n in ast.parse(source.read_text(encoding="utf-8")).body
+                    if isinstance(n, ast.FunctionDef) and n.name == "main")
+        class AfterPreflight(Exception):
+            pass
+        args = types.SimpleNamespace(legacy=False, model_path="model", first_frame="image")
+        cuda = types.SimpleNamespace(**{name: Mock() for name in (
+            "enable_flash_sdp", "enable_mem_efficient_sdp", "enable_math_sdp",
+            "allow_fp16_bf16_reduction_math_sdp")})
+        preflight = types.SimpleNamespace(run_preflight=Mock())
+        namespace = dict(os=os, parse_args=lambda: args,
+                         torch=types.SimpleNamespace(backends=types.SimpleNamespace(cuda=cuda)),
+                         time=types.SimpleNamespace(perf_counter=Mock(side_effect=AfterPreflight)))
+        exec(compile(ast.Module(body=[main], type_ignores=[]), str(source), "exec"), namespace)
+        settings = dict(H3_PREFLIGHT_OUTPUT="preflight.json", H3_SOURCE_ROOT="source",
+                        H3_EXPECTED_GPUS="8", H3_COMPARE_BF16_MATH="0")
+        with patch.dict(os.environ, settings), patch.dict(sys.modules, {"h3_preflight": preflight}):
+            with self.assertRaises(AfterPreflight):
+                namespace["main"]()
+            preflight.run_preflight.assert_called_once_with("source", "model", "image", "preflight.json", 8)
+            cuda.enable_flash_sdp.assert_called_once_with(False)
+            preflight.run_preflight.reset_mock()
+            for name in vars(cuda):
+                getattr(cuda, name).reset_mock()
+            args.legacy = True
+            with self.assertRaises(AfterPreflight):
+                namespace["main"]()
+            preflight.run_preflight.assert_not_called()
+            for name in vars(cuda):
+                getattr(cuda, name).assert_not_called()
+            args.legacy = False
+            preflight.run_preflight.side_effect = RuntimeError("preflight failed")
+            with self.assertRaisesRegex(RuntimeError, "preflight failed"):
+                namespace["main"]()
+
     def test_generation_hook_checks_once_and_fails_before_running_script(self):
         import runpy
         import types

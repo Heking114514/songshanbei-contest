@@ -37,8 +37,12 @@ def make_kernel(block_m: int = 1, tile_width: int = 512, num_warps: int = 4):
         )
 
     def application(x, alpha_exp, beta_exp, output):
-        sine = math.sin(alpha_exp * x)
-        output = x + sine * sine / (beta_exp + 1e-9)  # noqa: F841
+        # Exponentiate the channel parameters inside the same fused kernel.
+        # The row tiling broadcasts each scalar over the current length tile.
+        alpha = math.exp(alpha_exp)
+        beta = math.exp(beta_exp)
+        sine = math.sin(alpha * x)
+        output = x + sine * sine / (beta + 1e-9)  # noqa: F841
 
     return ninetoothed.make(
         arrangement,
@@ -73,12 +77,12 @@ def snake_beta(
     tile_width: int = 512,
     num_warps: int = 4,
 ) -> torch.Tensor:
-    """Apply SnakeBeta using precomputed exponentiated parameters.
+    """Apply SnakeBeta to log-scale channel parameters.
 
     Args:
         hidden_states: Contiguous `[batch, channels, length]` tensor.
-        alpha_exp: `[channels]` tensor equal to `exp(alpha_log)`.
-        beta_exp: `[channels]` tensor equal to `exp(beta_log)`.
+        alpha_exp: `[channels]` log-scale alpha parameter.
+        beta_exp: `[channels]` log-scale beta parameter.
         out: Optional contiguous output tensor.
     """
     if hidden_states.ndim != 3:
@@ -89,11 +93,17 @@ def snake_beta(
     if alpha_exp.numel() != channels or beta_exp.numel() != channels:
         raise ValueError("SnakeBeta alpha_exp and beta_exp must have channels elements")
 
+    # The common H3 path has batch size one. Avoid physical replication when
+    # no new values are required; tiling in the NineToothed kernel handles it.
     alpha_rows = (
-        alpha_exp.unsqueeze(0).expand(batch, -1).reshape(batch * channels).contiguous()
+        alpha_exp.contiguous()
+        if batch == 1
+        else alpha_exp.unsqueeze(0).expand(batch, -1).reshape(batch * channels).contiguous()
     )
     beta_rows = (
-        beta_exp.unsqueeze(0).expand(batch, -1).reshape(batch * channels).contiguous()
+        beta_exp.contiguous()
+        if batch == 1
+        else beta_exp.unsqueeze(0).expand(batch, -1).reshape(batch * channels).contiguous()
     )
     output = torch.empty_like(hidden_states) if out is None else out
     if not output.is_contiguous() or output.shape != hidden_states.shape:

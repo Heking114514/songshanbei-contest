@@ -39,6 +39,8 @@ def main():
     print(f" torch      : {env.get('torch', 'n/a')}")
     print(f" hip        : {env.get('hip', 'n/a')}")
     print(f" device     : {env.get('device', 'n/a')}")
+    print(" provenance : legacy result files predate the compliance rewrite")
+    print(" scope      : historical measurements are not evidence for the current source")
     print()
     print("运行入口:")
     print("  srun --gres=dcu:1 bash scripts/run_operator_demo.sh")
@@ -49,7 +51,7 @@ def main():
     print("  Qwen条件 -> 首帧VAE编码 -> packed DiT x49 -> VAE解码 -> MP4")
     print("@@PAGE:02 DiT 热点算子")
     print("=" * 78)
-    print(" [正向提升] DiT 正式路径")
+    print(" [历史测量] DiT 候选算子；当前已恢复基础组合")
     print("=" * 78)
     if final:
         for row in final["results"]:
@@ -66,13 +68,19 @@ def main():
                 )
     if mha_base:
         for row in mha_base["results"]:
-            print(
-                f" MHA         seq={row['seq']:<6} "
-                f"dense {row['dense_ms']:.4f} -> SDPA {row['sdpa_ms']:.4f} ms  "
-                f"{row['speedup']:.3f}x  cos={row['correctness']['cosine']:.8f}"
-            )
+            if "formal_ms" in row and "ratio" in row:
+                print(
+                    f" MHA         seq={row['seq']:<6} "
+                    f"reference {row['dense_ms']:.4f} -> formal {row['formal_ms']:.4f} ms  "
+                    f"ratio={row['ratio']:.3f}x  cos={row['correctness']['cosine']:.8f}"
+                )
+            else:
+                print(
+                    f" MHA         seq={row['seq']:<6} historical SDPA result; "
+                    "not attributable to the current explicit-attention source"
+                )
     print()
-    print("[正确性通过，但不单独宣称速度提升]")
+    print("[正确性与正式路径检查]")
     if final:
         for row in final["results"]:
             if row.get("case") == "rms_norm_head_dim":
@@ -97,7 +105,7 @@ def main():
                 )
     print("@@PAGE:03 音频算子与接口补齐")
     print("=" * 78)
-    print(" [正向提升] NineToothed SnakeBeta")
+    print(" [历史测量] NineToothed SnakeBeta；新增 exp 融合需复测")
     print("=" * 78)
     if snake:
         for row in snake["results"]:
@@ -120,7 +128,7 @@ def main():
             f"{weight_norm['speedup']:.3f}x  modules={weight_norm['modules_materialized']}"
         )
     print()
-    print("[接口补齐正确，但当前比 PyTorch 慢，禁止标成性能优化]")
+    print("[实验 ATen 接口历史结果；未纳入当前正式构建]")
     if group_norm:
         for row in group_norm["results"]:
             print(
@@ -135,7 +143,7 @@ def main():
             )
     print("@@PAGE:04 测试、规格与结论")
     print("=" * 78)
-    print(" [官方测试]")
+    print(" [历史算子测试；当前构建未复验]")
     print(" GroupNorm 18/18 | Conv1d 12/12 | ConvTranspose1d 12/12 | SnakeBeta 9/9")
     print()
     print("[媒体输出契约]")
@@ -153,14 +161,10 @@ def main():
         print(" negative case:", media["negative_case"]["error"])
     print()
     print("[结论]")
-    print(" 可明确宣称有性能提升的算子：")
-    print("   AdaLN、GatedResidual、MHA、SnakeBeta JIT/AOT、weight-norm")
-    print(" 仅通过正确性，不宣称速度提升：")
-    print("   Q/K RMSNorm、mRoPE")
-    print(" 仅补齐接口，当前实测更慢：")
-    print("   GroupNorm、Conv1d、ConvTranspose1d、SnakeBeta ATen 桥")
-    print(" 无法在当前单卡阶段验证：")
-    print("   完整 FL2VA、参考视频规格、端到端耗时、SSIM")
+    print(" 历史结果仅覆盖当时的源码；当前合规改造后需重新测量。")
+    print(" 当前正式路径：AdaLN/GatedResidual 基础算子组合、显式 Attention、SnakeBeta JIT。")
+    print(" 当前保留等价 weight-norm 常量展开；ATen 四算子桥未纳入正式构建。")
+    print(" 待八卡复验：完整 FL2VA、音视频差异、端到端耗时、SSIM。")
 
 
 if __name__ == "__main__":

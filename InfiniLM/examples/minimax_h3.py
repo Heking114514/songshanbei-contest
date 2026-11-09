@@ -6,6 +6,7 @@ import argparse
 import functools
 import gc
 import json
+import os
 import re
 import time
 from collections import defaultdict
@@ -515,32 +516,41 @@ def load_pipeline(
         )
         execution_device = pipe._execution_device
         print(f"[model] Diffusers execution device: {execution_device}")
-        # load_components already applied DTYPE while honoring each VAE's
-        # _keep_in_fp32_modules. A second dtype cast here would downcast the
-        # video encoder and the entire audio codec, changing decoded output.
-        pipe.vae.to(device=execution_device)
-        pipe.audio_vae.to(device=execution_device)
-        pipe.vae.requires_grad_(False)
-        pipe.audio_vae.requires_grad_(False)
-        pipe.vae.eval()
-        pipe.audio_vae.eval()
+        if legacy:
+            # Keep the reference backend byte-for-byte on the upstream loading
+            # semantics. In particular, no fallback preprocessing or kernel
+            # replacement belongs in a Baseline run.
+            pipe.vae.to(device=execution_device, dtype=DTYPE)
+            pipe.audio_vae.to(device=execution_device, dtype=DTYPE)
+            pipe.vae.requires_grad_(False)
+            pipe.audio_vae.requires_grad_(False)
+        else:
+            # load_components already applied DTYPE while honoring each VAE's
+            # _keep_in_fp32_modules. A second dtype cast here would downcast the
+            # video encoder and the entire audio codec, changing decoded output.
+            pipe.vae.to(device=execution_device)
+            pipe.audio_vae.to(device=execution_device)
+            pipe.vae.requires_grad_(False)
+            pipe.audio_vae.requires_grad_(False)
+            pipe.vae.eval()
+            pipe.audio_vae.eval()
 
-        protected_modules = {
-            "vae.encoder": pipe.vae.encoder,
-            "audio_vae.decoder": pipe.audio_vae.decoder,
-            "audio_vae.pre_block": pipe.audio_vae.pre_block,
-            "audio_vae.dec_in_proj": pipe.audio_vae.dec_in_proj,
-        }
-        for name, module in protected_modules.items():
-            dtypes = {parameter.dtype for parameter in module.parameters()}
-            if not dtypes.issubset({torch.float32}):
-                raise RuntimeError(
-                    f"{name} must remain float32 for reference parity, got {dtypes}"
-                )
-        materialized_norms = materialize_audio_weight_norm(pipe.audio_vae)
-        installed_kernels = install_ninetoothed_audio_kernels(pipe.audio_vae)
-        print(f"[model] Materialized audio weight norms: {materialized_norms}")
-        print(f"[model] NineToothed audio SnakeBeta kernels: {installed_kernels}")
+            protected_modules = {
+                "vae.encoder": pipe.vae.encoder,
+                "audio_vae.decoder": pipe.audio_vae.decoder,
+                "audio_vae.pre_block": pipe.audio_vae.pre_block,
+                "audio_vae.dec_in_proj": pipe.audio_vae.dec_in_proj,
+            }
+            for name, module in protected_modules.items():
+                dtypes = {parameter.dtype for parameter in module.parameters()}
+                if not dtypes.issubset({torch.float32}):
+                    raise RuntimeError(
+                        f"{name} must remain float32 for reference parity, got {dtypes}"
+                    )
+            materialized_norms = materialize_audio_weight_norm(pipe.audio_vae)
+            installed_kernels = install_ninetoothed_audio_kernels(pipe.audio_vae)
+            print(f"[model] Materialized audio weight norms: {materialized_norms}")
+            print(f"[model] NineToothed audio SnakeBeta kernels: {installed_kernels}")
     return pipe, text_encoder, transformer
 
 
@@ -784,6 +794,23 @@ def print_generation_summary(
 
 def main() -> None:
     args = parse_args()
+    if not args.legacy:
+        # The platform's default Torch SDPA can require an optional vendor
+        # extension. Preserve the validated native vision path without changing
+        # the legacy reference process or the explicit InfiniCore DiT MHA.
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
+        torch.backends.cuda.allow_fp16_bf16_reduction_math_sdp(True)
+    # Run in the real native process without changing the reference's SDPA
+    # backend or requiring a sitecustomize hook.
+    preflight_output = os.environ.get("H3_PREFLIGHT_OUTPUT")
+    if preflight_output and not args.legacy:
+        from h3_preflight import run_preflight
+        run_preflight(
+            os.environ["H3_SOURCE_ROOT"], args.model_path, args.first_frame,
+            preflight_output, int(os.environ.get("H3_EXPECTED_GPUS", "8")),
+        )
     total_started = time.perf_counter()
     devices, legacy_text_devices, legacy_transformer_devices = validate_args(args)
     active_devices = (

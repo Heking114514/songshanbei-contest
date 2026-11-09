@@ -18,7 +18,9 @@ if os.environ.get("H3_COMPARE_BF16_MATH") == "1" and os.path.basename(sys.argv[0
             from h3_reference_sdpa import install_reference_head_batch
             install_reference_head_batch()
             print("H3_REFERENCE_RUNTIME head_batch=" + os.environ["H3_REFERENCE_MAX_HEADS"], flush=True)
-        print("H3_COMPARE_CHILD_RUNTIME attention=math_bf16", flush=True)
+        attention = ("legacy_bf16_math_sdpa" if "--legacy" in sys.argv
+                     else "explicit_qk_softmax_pv")
+        print("H3_COMPARE_CHILD_RUNTIME attention=" + attention, flush=True)
     except BaseException:
         # Python normally ignores sitecustomize errors; fail before model loading.
         import traceback

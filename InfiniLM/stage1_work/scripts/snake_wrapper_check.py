@@ -18,9 +18,9 @@ for length in (207, 2048, 331200):
     x = torch.randn(2, 64, length, device="cuda")
     alpha_log = torch.randn(64, device="cuda")
     beta_log = torch.randn(64, device="cuda")
+    actual = snake_beta(x, alpha_log, beta_log)
     alpha_exp = alpha_log.exp()
     beta_exp = beta_log.exp()
-    actual = snake_beta(x, alpha_exp, beta_exp)
     expected = (
         x
         + torch.sin(alpha_exp[None, :, None] * x).square()

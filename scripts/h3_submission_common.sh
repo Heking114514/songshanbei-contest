@@ -52,8 +52,8 @@ worker() (
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" build
     source "$TOOLS/h3_repro_env.sh"
     python -u "$TOOLS/h3_submission_record.py" begin
-    export H3_COMPARE_BF16_MATH=1
-    export PYTHONPATH="$TOOLS/h3_compare_hook:$TOOLS:${PYTHONPATH:-}"
+    export H3_COMPARE_BF16_MATH="${H3_COMPARE_BF16_MATH:-0}"
+    export PYTHONPATH="$TOOLS:${PYTHONPATH:-}"
     # Full native generation exactly once. First-use JIT is part of inference.
     H3_PREFLIGHT_OUTPUT="$H3_RUN_DIR/preflight.json" \
     python -u "$H3_SOURCE_ROOT/InfiniLM/examples/minimax_h3.py" fl2va \

@@ -116,16 +116,8 @@ infiniStatus_t Descriptor::calculate(
     size_t nhead = _info.shape.size() > 2 ? _info.shape[1] : 1;
     auto cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
-    // Narrow rows such as H3's per-head Q/K norm (dim=128) cannot use the
-    // device-wide block size productively. Match the block to the row width
-    // before falling back to the existing large-row launch policy.
-    if (dim <= 128) {
-        CHECK_STATUS(launchKernel<128>(batch_size, nhead, dim, y, _info.atype, stride_y_batch, stride_y_nhead, x, stride_x_batch, stride_x_nhead, w, _info.wtype, _info.epsilon, cuda_stream));
-    } else if (dim <= 256) {
-        CHECK_STATUS(launchKernel<256>(batch_size, nhead, dim, y, _info.atype, stride_y_batch, stride_y_nhead, x, stride_x_batch, stride_x_nhead, w, _info.wtype, _info.epsilon, cuda_stream));
-    } else if (dim <= 512) {
-        CHECK_STATUS(launchKernel<512>(batch_size, nhead, dim, y, _info.atype, stride_y_batch, stride_y_nhead, x, stride_x_batch, stride_x_nhead, w, _info.wtype, _info.epsilon, cuda_stream));
-    } else if (_opaque->internal->maxThreadsPerBlock() == CUDA_BLOCK_SIZE_4096) {
+    // launch kernel with different block sizes
+    if (_opaque->internal->maxThreadsPerBlock() == CUDA_BLOCK_SIZE_4096) {
         CHECK_STATUS(launchKernel<CUDA_BLOCK_SIZE_4096>(batch_size, nhead, dim, y, _info.atype, stride_y_batch, stride_y_nhead, x, stride_x_batch, stride_x_nhead, w, _info.wtype, _info.epsilon, cuda_stream));
     } else if (_opaque->internal->maxThreadsPerBlock() == CUDA_BLOCK_SIZE_2048) {
         CHECK_STATUS(launchKernel<CUDA_BLOCK_SIZE_2048>(batch_size, nhead, dim, y, _info.atype, stride_y_batch, stride_y_nhead, x, stride_x_batch, stride_x_nhead, w, _info.wtype, _info.epsilon, cuda_stream));

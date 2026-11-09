@@ -348,35 +348,9 @@ def validate_attention(seq: int, dtype: torch.dtype) -> dict:
         else {"skipped": "long-sequence case measures memory/scaling only"}
     )
     backend_info = {}
-    try:
-        backend_info["fused_sdp_choice"] = str(
-            torch.nn.attention._fused_sdp_choice(
-                q.transpose(1, 2),
-                k.transpose(1, 2),
-                v.transpose(1, 2),
-            )
-        )
-    except Exception as exc:
-        backend_info["fused_sdp_choice_error"] = str(exc)
-    try:
-        from torch.backends.cuda import SDPAParams, can_use_flash_attention
-
-        backend_info["can_use_flash"] = bool(
-            can_use_flash_attention(
-                SDPAParams(
-                    q.transpose(1, 2),
-                    k.transpose(1, 2),
-                    v.transpose(1, 2),
-                    None,
-                    0.0,
-                    False,
-                    False,
-                ),
-                debug=False,
-            )
-        )
-    except Exception as exc:
-        backend_info["flash_probe_error"] = str(exc)
+    backend_info["implementation"] = (
+        "explicit QK^T-scale-softmax-PV Hygon implementation"
+    )
     return {
         "case": "mha_non_causal",
         "seq": seq,

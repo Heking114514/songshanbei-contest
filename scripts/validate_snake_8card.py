@@ -33,11 +33,13 @@ def main():
             rng = torch.Generator(device=device).manual_seed(42)
             for batch, channels, length in ((1, 32, 207), (2, 64, 2048), (1, 16, 331200)):
                 x = torch.randn(batch, channels, length, device=device, generator=rng)
-                alpha = torch.randn(channels, device=device, generator=rng).exp()
-                beta = torch.randn(channels, device=device, generator=rng).exp()
+                alpha_log = torch.randn(channels, device=device, generator=rng)
+                beta_log = torch.randn(channels, device=device, generator=rng)
+                alpha = alpha_log.exp()
+                beta = beta_log.exp()
                 expected = x + torch.sin(alpha[None, :, None] * x).square() / (beta[None, :, None] + 1e-9)
                 started = time.perf_counter()
-                actual = module.snake_beta(x, alpha, beta)
+                actual = module.snake_beta(x, alpha_log, beta_log)
                 torch.cuda.synchronize(device)
                 elapsed = time.perf_counter() - started
                 torch.testing.assert_close(actual, expected, rtol=report['rtol'], atol=report['atol'])
@@ -49,7 +51,7 @@ def main():
                 results.append(entry)
                 output.write_text(json.dumps(report, indent=2))
                 print(json.dumps(entry), flush=True)
-                del x, actual, expected, diff, alpha, beta
+                del x, actual, expected, diff, alpha, beta, alpha_log, beta_log
             torch.cuda.empty_cache()
     report['complete'] = True
     output.write_text(json.dumps(report, indent=2))

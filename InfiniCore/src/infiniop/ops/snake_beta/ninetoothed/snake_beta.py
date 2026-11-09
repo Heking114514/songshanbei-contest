@@ -1,7 +1,7 @@
 """Dynamic-length NineToothed SnakeBeta kernel.
 
-`alpha_exp` and `beta_exp` are expected to be precomputed once from the
-checkpoint's alpha_log/beta_log parameters.
+The kernel exponentiates the checkpoint's log-scale alpha and beta values so
+those numerical operations stay inside the generated NineToothed program.
 """
 
 from __future__ import annotations
@@ -41,8 +41,10 @@ def make_kernel(block_m: int = 1, tile_width: int = 512, num_warps: int = 4):
         )
 
     def application(x, alpha_exp, beta_exp, output):
-        sine = math.sin(alpha_exp * x)
-        output = x + sine * sine / (beta_exp + 1e-9)  # noqa: F841
+        alpha = math.exp(alpha_exp)
+        beta = math.exp(beta_exp)
+        sine = math.sin(alpha * x)
+        output = x + sine * sine / (beta + 1e-9)  # noqa: F841
 
     return ninetoothed.make(
         arrangement,

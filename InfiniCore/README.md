@@ -103,6 +103,7 @@ python scripts/install.py [XMAKE_CONFIG_FLAGS]
 | `--iluvatar-gpu=[y\|n]`  | 是否编译天数 GPU 接口实现         | n
 | `--qy-gpu=[y\|n]`        | 是否编译QY GPU 接口实现           | n
 | `--hygon-dcu=[y\|n]`     | 是否编译海光 DCU 接口实现         | n
+| `--hygon-explicit-attention=[y\|n]` | 是否编译海光显式 QK^T/softmax/PV Attention；需同时启用 ATen，且与 FlashAttention 互斥 | n |
 | `--kunlun-xpu=[y\|n]`    | 是否编译昆仑 XPU 接口实现         | n
 | `--ali-ppu=[y\|n]`       | 是否编译阿里 PPU 接口实现         | n
 | `--ninetoothed=[y\|n]`   | 是否编译九齿实现                 | n
@@ -280,6 +281,13 @@ python scripts/install.py [XMAKE_CONFIG_FLAGS]
 
   # xmake 配置环节需要同时打开海光 DCU、ATen 和 flash-attn：
   xmake f --hygon-dcu=y --aten=y --flash-attn=/usr/local/lib/python3.10/dist-packages -cv
+  ```
+
+##### 海光 DCU 显式 Attention（本提交正式路径）
+
+  ```shell
+  # 不依赖 FlashAttention，使用显式 QK^T、softmax 和 PV。
+  xmake f --hygon-dcu=y --aten=y --hygon-explicit-attention=y -cv
 
   # 编译 Python/C++ 封装：
   xmake build _infinicore

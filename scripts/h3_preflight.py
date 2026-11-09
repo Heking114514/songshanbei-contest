@@ -80,7 +80,7 @@ def run_preflight(source_root, model_path, first_frame, output, expected_gpus):
             if not (model_path / child).is_dir():
                 raise RuntimeError("Missing shared model directory: " + child)
         result.update(gpu_check(expected_gpus))
-        bf16_math()
+        attention_mode = "explicit_qk_softmax_pv"
         from PIL import Image
         with Image.open(first_frame) as im:
             im.load()
@@ -105,7 +105,8 @@ def run_preflight(source_root, model_path, first_frame, output, expected_gpus):
                 if not Path(module.__file__).resolve().is_relative_to(expected_root.resolve()):
                     raise RuntimeError(name + " was imported from a different checkout")
         result.update(passed=True, integrity="presence_size_and_decode",
-                      attention="math_bf16", packages=versions)
+                      attention=attention_mode, torch_sdpa_scope="native vision; legacy unchanged",
+                      packages=versions)
         print("H3_COMPARE_PREFLIGHT_OK", flush=True)
     except BaseException as error:
         result["error"] = repr(error)

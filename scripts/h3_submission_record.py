@@ -58,8 +58,10 @@ def begin():
     model = Path(os.environ["MODEL_PATH"]).resolve()
     result = dict(started_at=now(), mode=os.environ["H3_SUBMISSION_MODE"], first_frame=image,
         prompt="A dog falls asleep", seed=42, requested_steps=50, num_frames=124,
-        full_model=True, smoke_executed=False, preliminary_warmup_executed=False,
-        first_use_jit_allowed=True, attention="math_bf16", reference_max_heads=4,
+        full_model=True, smoke_executed=False,
+        preliminary_warmup_executed=os.environ.get("H3_PRELIMINARY_OPERATOR_VALIDATION") == "1",
+        first_use_jit_allowed=True, attention="explicit_qk_softmax_pv",
+        reference_max_heads=int(os.environ.get("H3_REFERENCE_MAX_HEADS", "0")),
         source_root=str(root), model_path=str(model),
         model_configs=[fingerprint(model / name) for name in (
             "diffusers/model_index.json", "diffusers/transformer/config.json",

@@ -67,9 +67,7 @@ infiniStatus_t launchMRoPE(
     const Tpos *positions,
     cudaStream_t stream) {
     dim3 grid_dim(uint32_t(info.num_tokens), uint32_t(std::max(info.num_q_heads, info.num_kv_heads)));
-    const size_t active_width = std::max(info.half_rotary_dim, info.head_size - info.rotary_dim);
-    const int rounded_threads = static_cast<int>((active_width + 31) / 32 * 32);
-    int nthreads = std::min(block_size, rounded_threads);
+    int nthreads = std::max(int(info.half_rotary_dim), std::min(block_size, 256));
     mropeKernel<Tdata, Tpos><<<grid_dim, nthreads, 0, stream>>>(
         q_out, k_out, q, k, cos, sin, positions,
         info.num_q_heads, info.num_kv_heads, info.head_size, info.rotary_dim, info.half_rotary_dim,

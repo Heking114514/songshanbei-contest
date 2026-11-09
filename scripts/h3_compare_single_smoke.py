@@ -79,7 +79,7 @@ def generate():
     from h3_preflight import bf16_math, gpu_check
     gpu_check(1)
     bf16_math()
-    if "--legacy" in sys.argv:
+    if "--legacy" in sys.argv and os.environ.get("H3_SMOKE_REFERENCE_HEAD_BATCH") == "1":
         from h3_reference_sdpa import install_reference_head_batch
         install_reference_head_batch(max_heads=4, min_score_bytes=0)
         print("SMOKE_REFERENCE_HEAD_BATCH_ENABLED max_heads=4", flush=True)
@@ -155,7 +155,8 @@ def compare():
                 "--output-dir", str(out)]
     rc = m.main()
     record = dict(rc=rc, scope="single-GPU reduced-model smoke; not official score",
-                  full_model=False, num_frames=22, steps=2, reference_head_batch=4,
+                  full_model=False, num_frames=22, steps=2,
+                  reference_head_batch=(4 if os.environ.get("H3_SMOKE_REFERENCE_HEAD_BATCH") == "1" else 0),
                   results=results, time=time.time())
     (WORK / (tag + "-result.json")).write_text(json.dumps(record, indent=2))
     if rc != 0:

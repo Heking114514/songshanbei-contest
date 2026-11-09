@@ -25,24 +25,9 @@ def _snake_beta_forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
     if self.training or torch.is_grad_enabled():
         return self._infinilm_snake_beta_original(hidden_states)
 
-    alpha = self.alpha
-    beta = self.beta
-    key = (
-        alpha.data_ptr(),
-        alpha._version,
-        beta.data_ptr(),
-        beta._version,
-    )
-    if getattr(self, "_infinilm_snake_beta_key", None) != key:
-        object.__setattr__(self, "_infinilm_snake_beta_alpha_exp", alpha.detach().exp())
-        object.__setattr__(self, "_infinilm_snake_beta_beta_exp", beta.detach().exp())
-        object.__setattr__(self, "_infinilm_snake_beta_key", key)
-
-    return snake_beta_ninetoothed(
-        hidden_states,
-        self._infinilm_snake_beta_alpha_exp,
-        self._infinilm_snake_beta_beta_exp,
-    )
+    # Both log-scale parameters stay unchanged on the module. The fused
+    # NineToothed kernel performs exp(alpha), exp(beta), sin and normalization.
+    return snake_beta_ninetoothed(hidden_states, self.alpha.detach(), self.beta.detach())
 
 
 def install_ninetoothed_audio_kernels(audio_vae: torch.nn.Module) -> int:

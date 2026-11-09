@@ -1,4 +1,4 @@
-"""Compare Hygon SDPA MHA with the previous explicit dense-attention path."""
+"""Check the formal Hygon MHA against an independent explicit-attention path."""
 
 from __future__ import annotations
 
@@ -48,10 +48,10 @@ def compare(actual, expected):
     }
 
 
-def run_case(seq: int):
+def run_case(seq: int, heads: int = HEADS):
     generator = torch.Generator(device="cuda").manual_seed(20261031)
     q = torch.randn(
-        1, seq, HEADS, HEAD_DIM, device="cuda", dtype=torch.bfloat16, generator=generator
+        1, seq, heads, HEAD_DIM, device="cuda", dtype=torch.bfloat16, generator=generator
     )
     k = torch.randn_like(q)
     v = torch.randn_like(q)
@@ -68,22 +68,26 @@ def run_case(seq: int):
         probabilities = torch.softmax(scores, dim=-1)
         return torch.matmul(probabilities, v_t).transpose(1, 2)
 
-    def sdpa():
+    def formal():
         ic_mha(ic_q, ic_k, ic_v, None, scale, False, out=ic_out)
 
     expected = dense()
-    sdpa()
+    formal()
+    sync()
+    torch.testing.assert_close(output, expected, rtol=2e-3, atol=2e-4)
     dense_runs = [bench(dense, 1, 3) for _ in range(2)]
-    sdpa_runs = [bench(sdpa, 2, 5) for _ in range(2)]
+    formal_runs = [bench(formal, 2, 5) for _ in range(2)]
     dense_ms = statistics.median(dense_runs)
-    sdpa_ms = statistics.median(sdpa_runs)
+    formal_ms = statistics.median(formal_runs)
     return {
         "seq": seq,
+        "heads": heads,
+        "passed": True,
         "dense_ms": dense_ms,
-        "sdpa_ms": sdpa_ms,
-        "speedup": dense_ms / sdpa_ms,
+        "formal_ms": formal_ms,
+        "ratio": dense_ms / formal_ms,
         "dense_runs_ms": dense_runs,
-        "sdpa_runs_ms": sdpa_runs,
+        "formal_runs_ms": formal_runs,
         "correctness": compare(output, expected),
     }
 
@@ -91,17 +95,18 @@ def run_case(seq: int):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seqs", default="1024,4096")
+    parser.add_argument("--heads", type=int, default=HEADS)
     parser.add_argument("--out", default="results/mha_baseline_compare.json")
     args = parser.parse_args()
     infinicore.set_device(infinicore.device("cuda", 0))
 
     results = []
     for seq in [int(value) for value in args.seqs.split(",")]:
-        result = run_case(seq)
+        result = run_case(seq, args.heads)
         results.append(result)
         print(
             f"MHA seq={seq} dense={result['dense_ms']:.4f}ms "
-            f"sdpa={result['sdpa_ms']:.4f}ms speedup={result['speedup']:.3f}x "
+            f"formal={result['formal_ms']:.4f}ms ratio={result['ratio']:.3f}x "
             f"cos={result['correctness']['cosine']:.8f} "
             f"max_abs={result['correctness']['max_abs']:.3e}",
             flush=True,

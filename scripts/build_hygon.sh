@@ -80,7 +80,7 @@ configure_component() {
 }
 printf '[1/5] Configure InfiniCore (ATen on, CCL on, NineToothed Python JIT)\n'
 cd "$REPO_ROOT/InfiniCore"
-configure_component InfiniCore "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --hygon-dcu=y --hygon-arch="$HYGON_ARCH" --cuda="$HYGON_CUDA_HOME" --aten=y --ccl=y --ninetoothed=n --omp=n --cxxflags="-D_GLIBCXX_USE_CXX11_ABI=$INFINILM_CXX11_ABI"
+configure_component InfiniCore "${XMAKE_DIAGNOSTICS[@]}" -y -m release --ccache=n --hygon-dcu=y --hygon-arch="$HYGON_ARCH" --cuda="$HYGON_CUDA_HOME" --aten=y --hygon-explicit-attention=y --ccl=y --ninetoothed=n --omp=n --cxxflags="-D_GLIBCXX_USE_CXX11_ABI=$INFINILM_CXX11_ABI"
 printf '[2/5] Build and install InfiniCore\n'
 for dependency in infiniop infinirt infiniccl; do
     xmake build "${XMAKE_DIAGNOSTICS[@]}" -y -j "$JOBS" "$dependency"

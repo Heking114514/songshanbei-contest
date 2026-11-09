@@ -247,6 +247,26 @@ if has_config("moore-gpu") then
     includes("xmake/moore.lua")
 end
 
+-- Experimental Hygon ATen-backed operator fallbacks. Disabled by default; this
+-- switch is for isolated validation only and must not be used by the formal run.
+option("hygon-aten-experimental")
+    set_default(false)
+    set_showmenu(false)
+    set_description("Compile experimental Hygon ATen conv/group-norm/SnakeBeta fallbacks")
+option_end()
+
+if has_config("hygon-aten-experimental") then
+    raise("hygon-aten-experimental is validation-only and cannot enter the formal submission build")
+end
+
+-- The formal submission uses an explicit QK^T/softmax/PV composition on
+-- Hygon. This is a separate opt-in provenance, not a generic ATen fallback.
+option("hygon-explicit-attention")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Compile the explicit Hygon attention composition without FlashAttention")
+option_end()
+
 -- 海光DCU
 option("hygon-dcu")
     set_default(false)
@@ -264,6 +284,19 @@ option_end()
 if has_config("hygon-dcu") then
     add_defines("ENABLE_HYGON_API")
     includes("xmake/hygon.lua")
+end
+
+if has_config("hygon-explicit-attention") then
+    if not has_config("hygon-dcu") then
+        raise("hygon-explicit-attention requires --hygon-dcu=y")
+    end
+    if not has_config("aten") then
+        raise("hygon-explicit-attention requires --aten=y for its tensor bridge")
+    end
+    if has_config("flash-attn") and get_config("flash-attn") ~= "" then
+        raise("hygon-explicit-attention cannot be combined with --flash-attn")
+    end
+    add_defines("ENABLE_HYGON_EXPLICIT_ATTENTION")
 end
 
 -- 昆仑芯
@@ -1087,12 +1120,34 @@ target("infinicore_cpp_api")
     add_files("src/infinicore/ops/*/*.cc")
     add_files("src/infinicore/ops/*/*/*.cc")
     add_files("src/infinicore/ops/*/*/*/*.cc")
-    -- Hygon private sources carry their own feature guards. Keep them in the
-    -- target so ATen-backed operators such as fixed-length MHA are available
-    -- even when the optional flash-attn ABI is not configured.
+    -- Platform-private Hygon sources are guarded and only kept in Hygon builds.
+    -- Experimental ATen fallbacks remain outside the formal target unless an
+    -- explicit opt-in is supplied for a controlled validation build.
     if has_config("hygon-dcu") then
         if get_config("flash-attn") and get_config("flash-attn") ~= "" then
+            -- Hygon links against a prebuilt flash-attn extension with a different ABI.
+            -- Keep the platform-specific implementation under each op's hygon/ folder.
             add_files("src/infinicore/adaptor/flash_attn/hygon/*.cc")
+        elseif not has_config("hygon-explicit-attention") then
+            remove_files("src/infinicore/ops/*/hygon/*.cc")
+        end
+        -- Only the explicitly selected fixed-length Attention implementation is
+        -- a formal Hygon addition. All other private fallbacks are validation-only.
+        if not has_config("hygon-aten-experimental") then
+            remove_files(
+                "src/infinicore/ops/conv1d/hygon/*.cc",
+                "src/infinicore/ops/conv_transpose1d/hygon/*.cc",
+                "src/infinicore/ops/group_norm/hygon/*.cc",
+                "src/infinicore/ops/snake_beta/hygon/*.cc"
+            )
+        end
+        -- Variable-length and KV-cache MHA require the official FlashAttention
+        -- ABI and are not part of the fixed-length explicit formal path.
+        if not (get_config("flash-attn") and get_config("flash-attn") ~= "") then
+            remove_files(
+                "src/infinicore/ops/multi_head_attention_varlen/hygon/*.cc",
+                "src/infinicore/ops/mha_kvcache/hygon/*.cc"
+            )
         end
     else
         remove_files("src/infinicore/ops/*/hygon/*.cc")

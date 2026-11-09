@@ -4,7 +4,6 @@
 #include "../models_registry.hpp"
 
 #include <infinicore/ops/add.hpp>
-#include <infinicore/ops/addcmul.hpp>
 #include <infinicore/ops/cast.hpp>
 #include <infinicore/ops/distributed/allgather.hpp>
 #include <infinicore/ops/embedding.hpp>
@@ -55,14 +54,8 @@ infinicore::Tensor gather_rows(const infinicore::Tensor &table,
 infinicore::Tensor apply_adaln(const infinicore::Tensor &normalized,
                                const infinicore::Tensor &scale,
                                const infinicore::Tensor &shift) {
-    auto modulated = infinicore::op::addcmul(normalized, normalized, scale, 1.0f);
-    return infinicore::op::add(modulated, shift);
-}
-
-infinicore::Tensor gated_residual(const infinicore::Tensor &residual,
-                                  const infinicore::Tensor &gate,
-                                  const infinicore::Tensor &branch) {
-    return infinicore::op::addcmul(residual, gate, branch, 1.0f);
+    auto scaled = infinicore::op::mul(normalized, scale);
+    return infinicore::op::add(infinicore::op::add(normalized, scaled), shift);
 }
 
 void require_tensor(const std::optional<infinicore::Tensor> &tensor,
@@ -344,12 +337,13 @@ infinicore::Tensor MiniMaxH3TransformerBlock::forward(
     auto normalized = norm1_->forward(hidden_states);
     normalized = apply_adaln(normalized, scale_msa, shift_msa);
     auto attention_output = attn_->forward(normalized, rope, position_ids, rotary_cos_sin_cache);
-    auto output = gated_residual(hidden_states, gate_msa, attention_output);
+    auto output = infinicore::op::add(
+        hidden_states, infinicore::op::mul(gate_msa, attention_output));
 
     normalized = norm2_->forward(output);
     normalized = apply_adaln(normalized, scale_mlp, shift_mlp);
     auto mlp_output = ff_->forward(normalized);
-    output = gated_residual(output, gate_mlp, mlp_output);
+    output = infinicore::op::add(output, infinicore::op::mul(gate_mlp, mlp_output));
     return output;
 }
 
