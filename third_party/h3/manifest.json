@@ -27,8 +27,27 @@
       "path": "third_party/h3/xmake-bundle-v3.0.3.linux.x86_64",
       "size": 2761352,
       "sha256": "cf4def6e60db1b35d1af4c0064abb069b4b89d90aea3d57b551ef4c697141190"
+    },
+    {
+      "path": "third_party/h3/phase10-best-bundle.tar.gz",
+      "size": 132170,
+      "sha256": "a9621f048e1bdcd692d4e41c7604d3fc5ba35ad1c4be14dd1f78a6b2444a4443"
     }
   ],
+  "attention_bundle": {
+    "archive": "third_party/h3/phase10-best-bundle.tar.gz",
+    "bundle_json_sha256": "d167348cc76e845439c554c007d48154b34414cec9769b9e82547cf2f187b120",
+    "dispatcher_sha256": "5a5e40df8c40d02460f9f478387c693bac69a64863b20ded9d0f5e92965d2230",
+    "abi_sha256": "212bdebc17b24ef96ee8e3ae2de6c81203a59ed26b07dc1997d20707ffdc1635",
+    "arch": "gfx936",
+    "config": {
+      "block_m": 128,
+      "block_n": 32,
+      "num_warps": 4,
+      "num_stages": 1,
+      "prefetch_v": false
+    }
+  },
   "flagtree": {
     "commit": "47970467c4d75a9cfffb84426383c7e7a9f2557a",
     "source_url": "https://codeload.github.com/flagos-ai/FlagTree/tar.gz/47970467c4d75a9cfffb84426383c7e7a9f2557a",

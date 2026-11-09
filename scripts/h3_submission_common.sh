@@ -27,6 +27,8 @@ export H3_SUBMISSION_MODE="$mode"
 export H3_SUBMISSION_INVOCATION="$H3_RUN_DIR/invocation.json"
 export OUTPUT_DIR="$H3_RUN_DIR/compare"
 export H3_NATIVE_VIDEO="$H3_RUN_DIR/result.mp4"
+export H3_ATTENTION_BUNDLE_DIR="$H3_RUN_DIR/attention-bundle"
+env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u "$TOOLS/h3_attention_bundle.py" verify
 if [ "$mode" = check ]; then
     export H3_REFERENCE_VIDEO="$H3_DELIVERY_DIR/reference/reference_fl2va.mp4"
     env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u "$TOOLS/h3_submission_record.py" verify-reference
@@ -51,6 +53,20 @@ worker() (
     export H3_BUILD_AUDIT_OUTPUT="$H3_RUN_DIR/origins.json"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" build
     source "$TOOLS/h3_repro_env.sh"
+    while IFS= read -r variable; do unset "$variable"; done < <(env | sed -n 's/^\(H3_EXPERIMENT_[A-Za-z0-9_]*\)=.*/\1/p')
+    python -u "$TOOLS/h3_attention_bundle.py" deploy --output "$H3_ATTENTION_BUNDLE_DIR"
+    export H3_EXPERIMENT_FLASH_GFX936=1
+    export H3_FLASH_LIBRARY="$H3_ATTENTION_BUNDLE_DIR/libh3_flash_dispatch.so"
+    export H3_EXPERIMENT_RMS_ADALN=1 H3_EXPERIMENT_GATE_RMS_ADALN=1
+    export H3_EXPERIMENT_QK_NORM_ROPE=1 H3_EXPERIMENT_ADDCMUL_ROWS=1
+    export H3_EXPERIMENT_ADALN_INPLACE=1 H3_EXPERIMENT_ADALN_BATCH=1
+    export H3_EXPERIMENT_ROPE_INPLACE=1 H3_EXPERIMENT_VAE_DEVICES=4
+    export H3_EXPERIMENT_MHA_QUERY_CHUNK=0 H3_EXPERIMENT_MHA_HEAD_BATCH=0
+    export H3_EXPERIMENT_SWIGLU_ROWS=0 H3_EXPERIMENT_SNAKE_PREPARED=0
+    export H3_EXPERIMENT_SNAKE_STRIDED=0 H3_EXPERIMENT_ADALN_INDEXED=0
+    export H3_EXPERIMENT_FUSED_RMS_BLOCK=0 H3_EXPERIMENT_VIDEO_POSTPROCESS=0
+    export H3_EXPERIMENT_DETERMINISTIC_BLAS=0 H3_EXPERIMENT_GEMM_LT=0
+    export H3_EXPERIMENT_TP_OVERLAP_ROWS=0
     python -u "$TOOLS/h3_submission_record.py" begin
     export H3_COMPARE_BF16_MATH=1
     export PYTHONPATH="$TOOLS/h3_compare_hook:$TOOLS:${PYTHONPATH:-}"

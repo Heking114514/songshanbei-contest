@@ -78,6 +78,8 @@ def main():
         from triton.backends.compiler import GPUTarget
         from triton.compiler import ASTSource
         kernel_path = source_dir / "phase7_flash_kernel.py"
+        if not kernel_path.is_file():
+            raise FileNotFoundError("Missing required phase7 AOT kernel: " + str(kernel_path))
         spec = importlib.util.spec_from_file_location("phase7_flash_kernel", kernel_path)
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module

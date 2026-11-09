@@ -1,6 +1,7 @@
 """Record submission inputs, official comparison text and output fingerprints."""
 import argparse
 from datetime import datetime, timezone, timedelta
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -49,6 +50,23 @@ def verify_reference():
         raise RuntimeError("Bundled reference size mismatch")
     return dict(video=reference, case=case)
 
+def attention_runtime():
+    library = Path(os.environ["H3_FLASH_LIBRARY"]).resolve(strict=True)
+    bundle = Path(os.environ["H3_ATTENTION_BUNDLE_DIR"]).resolve(strict=True)
+    if not library.is_relative_to(bundle):
+        raise RuntimeError("H3 attention dispatcher escaped the deployed bundle")
+    manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
+    expected = manifest["files"].get("libh3_flash_dispatch.so")
+    digest = hashlib.sha256(library.read_bytes()).hexdigest()
+    if expected != digest:
+        raise RuntimeError("H3 attention dispatcher changed after deployment")
+    flags = {key: value for key, value in os.environ.items()
+             if key.startswith("H3_EXPERIMENT_") or key == "H3_FLASH_LIBRARY"}
+    return dict(backend="triton_aot_dispatch", dispatcher=fingerprint(library),
+                bundle=fingerprint(bundle / "bundle.json"), dispatcher_sha256=digest,
+                abi=fingerprint(bundle / "h3_flash_abi.h"), flags=flags)
+
+
 def begin():
     root = Path(os.environ["H3_SOURCE_ROOT"]).resolve()
     image = fingerprint(os.environ["FIRST_FRAME"])
@@ -56,10 +74,11 @@ def begin():
     if not compare.is_file() or compare.stat().st_size == 0:
         raise RuntimeError("Missing or empty official comparator: " + str(compare))
     model = Path(os.environ["MODEL_PATH"]).resolve()
+    attention = attention_runtime()
     result = dict(started_at=now(), mode=os.environ["H3_SUBMISSION_MODE"], first_frame=image,
         prompt="A dog falls asleep", seed=42, requested_steps=50, num_frames=124,
         full_model=True, smoke_executed=False, preliminary_warmup_executed=False,
-        first_use_jit_allowed=True, attention="math_bf16", reference_max_heads=4,
+        first_use_jit_allowed=True, attention=attention, reference_max_heads=4,
         source_root=str(root), model_path=str(model),
         model_configs=[fingerprint(model / name) for name in (
             "diffusers/model_index.json", "diffusers/transformer/config.json",
