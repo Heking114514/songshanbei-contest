@@ -1,6 +1,6 @@
 # MiniMax-H3 技术补充
 
-更新时间：2026-11-10T03:09:56+08:00（北京时间）。
+更新时间：2026-11-10T03:18:45+08:00（北京时间）。
 
 下载、上传、启动与取视频统一见 [README](README.md)。本地整改计算代码已保存为 `4f1ebbc`，尚未推送远端；本轮验证为修复后的增量续跑，整改版完整冷启动及连续换例仍待复验。本文只保留环境、可选设置及维护细节，合并原 ENVIRONMENT、PACKAGING、VERSIONS、BASELINE 和“复现与提交说明”。
 
@@ -17,7 +17,7 @@ AFS 保留源码、原始依赖 ZIP 和最终结果。脚本在新终端初始 `
 | `work/toolchain/`、`work/xmake/`、`work/jit/` | 编译工具及 JIT 缓存 |
 | `runs/native-时间戳-进程号/` | 本次节点产物，完成后保存到 AFS |
 
-平台提供 Linux x86_64、Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享权重；脚本不安装其他 Torch。无需手工激活环境。同节点、同AFS源码目录重试可复用环境和未变化的对象，每次使用新的结果目录；本轮仍有127个InfiniLM对象重编，不能承诺同节点零编译。独立1188对象缓存已存AFS，但未包含Python环境和独立JIT缓存，跨节点恢复尚未验证；新节点仍按环境准备及所需构建流程处理。
+平台提供 Linux x86_64、Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享权重；脚本不安装其他 Torch。无需手工激活环境。同节点、同AFS源码目录重试可复用环境和未变化的对象，每次使用新的结果目录；是否需要重编由构建系统判定。新节点按环境准备及所需构建流程处理。
 
 仓库正式源码暂存、环境准备与产物保存采用存在性、大小、mtime、ZIP CRC和媒体解码等完整性检查，不执行SHA256校验。外部AFS传输客户端及历史维护工具不能据此视为已经全链去哈希，后续统一清理。来源审计核对模块和原生库路径。源码没有变化时保持 mtime，节点源码存在独立修改时拒绝覆盖；大小及 mtime 均未变的内容替换不在此检查范围内。
 
@@ -84,7 +84,7 @@ H3 DiT使用InfiniLM/InfiniCore原生TP8，Attention沿用官方已有显式QK�
 
 音频SnakeBeta走NineToothed Python JIT，log参数的exp、sin和归一化都在九齿kernel内执行；`build_hygon.sh` 的 `--ninetoothed=n` 关闭的是InfiniCore原生AOT选项，不能据此判断Python九齿JIT未启用。编译路径是NineToothed生成代码后交HCU FlagTree目标后端。native加载时仍展开音频weight norm并保留VAE FP32模块；legacy分支不安装这些native替换。
 
-本次完整用例及两份本地原版官方比较结果见README。仓库随附reference是历史legacy输出，含math_bf16/head_batch4设置；另一份0.40.0官方基线由独立运行取得，不替换随附reference。两份比较分别报告，均不产生同轮双方加速比；音频解码通过，音质尚未独立验收。
+仓库随附reference是历史legacy输出，含math_bf16/head_batch4设置，仅适用于reference/case.json登记的图片和生成参数。音质尚需独立验收。
 
 | 组件 | 整合时来源 commit |
 |---|---|
@@ -94,4 +94,4 @@ H3 DiT使用InfiniLM/InfiniCore原生TP8，Attention沿用官方已有显式QK�
 
 这些是导入来源；整改代码本地提交为 `4f1ebbc`，当前完整版本应同时记录 `git rev-parse HEAD` 与 `git status --short`，存在未提交改动时不能只用HEAD代表运行源码。NineToothed 快照对应的官方上游 commit 未独立核验。
 
-日常算法自验入口为 [run_h3_development.sh](scripts/run_h3_development.sh)，与正式入口分开。历史运行证据保留于 `results/`，各次记录只代表当时版本，不作为当前操作指令。最新实测摘要见 README。
+日常算法自验入口为 [run_h3_development.sh](scripts/run_h3_development.sh)，与正式入口分开。历史运行证据保留于 `results/`，各次记录只代表当时版本，不作为当前操作指令。实现说明与操作流程见 README。
