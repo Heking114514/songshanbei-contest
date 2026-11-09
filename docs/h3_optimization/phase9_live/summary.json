@@ -1,0 +1,123 @@
+{
+  "complete": true,
+  "timestamp": "2026-11-09T12:56:27.506753+08:00",
+  "afs_writes": false,
+  "local_only": true,
+  "media_quality_accepted": false,
+  "performance": {
+    "steady_step": {
+      "baseline": 5.094603404868394,
+      "candidate": 4.394788252655417,
+      "reduction_percent": 13.736400983523767
+    },
+    "pipeline": {
+      "baseline": 274.3356330646202,
+      "candidate": 240.2908565402031,
+      "reduction_percent": 12.409899561387927
+    },
+    "internal_total": {
+      "baseline": 328.5969675099477,
+      "candidate": 295.9554462265223,
+      "reduction_percent": 9.93360393152053
+    },
+    "outer_seconds": {
+      "baseline": 368.88283072784543,
+      "candidate": 345.4593000682071,
+      "reduction_percent": 6.34985656920416
+    }
+  },
+  "quality": {
+    "full-mixed-replay": {
+      "video": {
+        "exact": false,
+        "left_metadata": {
+          "width": 768,
+          "height": 928,
+          "declared_frames": 124,
+          "average_fps": 24.0,
+          "duration_seconds": 5.166666666666667
+        },
+        "right_metadata": {
+          "width": 768,
+          "height": 928,
+          "declared_frames": 124,
+          "average_fps": 24.0,
+          "duration_seconds": 5.166666666666667
+        },
+        "metadata_size_match": true,
+        "decoded_length_match": true,
+        "left_frames": 124,
+        "right_frames": 124,
+        "shape_mismatches": 0,
+        "different_elements": 210291052,
+        "compared_elements": 265125888,
+        "max_absolute_difference": 93,
+        "mean_absolute_difference": 2.5175912998733643,
+        "ssim_match_percent": 98.89094705876904,
+        "ssim_min_percent": 98.4913425245079,
+        "ssim_max_percent": 99.26879953149599,
+        "ssim_method": "grayscale frames scaled to at most 512 pixels per side"
+      },
+      "audio": {
+        "bitwise_equal": false,
+        "relative_l2": 0.04452999471206754,
+        "correlation": 0.999157506552094,
+        "finite": true
+      },
+      "first_different_dit_input": 1,
+      "all_dit_inputs_equal": false
+    },
+    "full-v4-replay": {
+      "video": {
+        "exact": true,
+        "left_metadata": {
+          "width": 768,
+          "height": 928,
+          "declared_frames": 124,
+          "average_fps": 24.0,
+          "duration_seconds": 5.166666666666667
+        },
+        "right_metadata": {
+          "width": 768,
+          "height": 928,
+          "declared_frames": 124,
+          "average_fps": 24.0,
+          "duration_seconds": 5.166666666666667
+        },
+        "metadata_size_match": true,
+        "decoded_length_match": true,
+        "left_frames": 124,
+        "right_frames": 124,
+        "shape_mismatches": 0,
+        "different_elements": 0,
+        "compared_elements": 265125888,
+        "max_absolute_difference": 0,
+        "mean_absolute_difference": 0.0,
+        "ssim_match_percent": 100.0,
+        "ssim_min_percent": 100.0,
+        "ssim_max_percent": 100.0,
+        "ssim_method": "grayscale frames scaled to at most 512 pixels per side"
+      },
+      "audio": {
+        "bitwise_equal": true,
+        "relative_l2": 0.0,
+        "correlation": 1.0,
+        "finite": true
+      },
+      "first_different_dit_input": null,
+      "all_dit_inputs_equal": true
+    }
+  },
+  "native_zero_compile": {
+    "objects": 1206,
+    "zero_compiles": true,
+    "sha_and_mtime_preserved": true,
+    "native_imports": true
+  },
+  "release_confirmed": true,
+  "limits": [
+    "One fixed example, 49 DiT calls, synchronized/hash diagnostics; not uninstrumented production benchmark.",
+    "Previous native trace missed GPU events; no communication overlap claim.",
+    "Historical 23.2% audio difference used different upstream inputs and is not causally comparable."
+  ]
+}

@@ -21,7 +21,7 @@ import zipfile
 import torch
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from phase9_attention import BASELINE_SHA, from_archive, checked_cases, shape_spec, select, render, sha, verify_bundle
+from phase9_attention import BASELINE_SHA, from_archive, checked_cases, shape_spec, select, render, sha, verify_bundle, with_layout_evidence
 from phase9_freeze import FrozenLoop, fingerprints, restore_tree, generation_contract
 from phase9_profile import summarize, duration, intersection
 from phase9_pipeline import parse_steps
@@ -96,6 +96,53 @@ class PolicyTests(unittest.TestCase):
             del hashes["libh3_flash_dispatch.so"]
             (root/"bundle.json").write_text(json.dumps(dict(schema=1,files=hashes)))
             with self.assertRaisesRegex(ValueError,"Incomplete"):verify_bundle(root)
+
+    def mixed_evidence(self):
+        candidate=next(r["library"] for r in self.policy["rules"]
+                       if r["spec"]["query_tokens"]==27570 and r["spec"]["strides"][0][1]==896)
+        w=copy.deepcopy(self.worker);w.update(layout="mixed-v",
+            worker_source_sha256=sha((SOURCE/"scripts/experiments/phase8_attention_worker.py").read_bytes()))
+        w["libraries"]["candidate"]=copy.deepcopy(self.policy["libraries"][candidate])
+        rows=[]
+        for q,k in ((65,33),(708,708),(27570,27570)):
+            row=copy.deepcopy(self.worker["cases"][0]);row.update(query=q,key=k,padded=False,heads=7)
+            spec=shape_spec(q,k,False);spec["strides"][2]=[k*2688,2688,128,1];row["spec"]=spec
+            rows.append(row)
+        w["cases"]=rows
+        return w,candidate
+
+    def test_live_mixed_layout_does_not_extrapolate(self):
+        w,candidate=self.mixed_evidence()
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"live.json";path.write_text(json.dumps(w))
+            original=copy.deepcopy(self.policy);p=with_layout_evidence(self.policy,path)
+            self.assertEqual(self.policy,original)
+            for row in w["cases"]:
+                spec=copy.deepcopy(row["spec"])
+                expected=candidate if row["speedup"]>=1+p["minimum_gain"] else BASELINE_SHA
+                self.assertEqual(select(p,spec),expected)
+                spec["strides"][2][1]+=128
+                self.assertEqual(select(p,spec),BASELINE_SHA)
+            self.assertIn("live_layout_evidence_sha256",p)
+
+    def test_live_mixed_evidence_rejects_unbound_layout_and_bad_graph(self):
+        w,_=self.mixed_evidence()
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"live.json"
+            for change in ("layout","graph","worker","candidate","median","duplicate","incomplete"):
+                bad=copy.deepcopy(w)
+                if change=="layout":bad["cases"][-1]["spec"]["strides"][2][1]=896
+                if change=="graph":bad["cases"][-1]["graph_updated_inputs"]["finite"]=False
+                if change=="worker":bad["worker_source_sha256"]="0"*64
+                if change=="candidate":bad["libraries"]["candidate"]["sha256"]="0"*64
+                if change=="median":bad["cases"][-1]["graph"]["median_ms"]=1e6
+                if change=="duplicate":bad["cases"][-1]=copy.deepcopy(bad["cases"][0])
+                if change=="incomplete":bad["complete"]=False
+                path.write_text(json.dumps(bad))
+                original=copy.deepcopy(self.policy)
+                with self.assertRaises(ValueError,msg=change):with_layout_evidence(self.policy,path)
+                self.assertEqual(self.policy,original)
+
 
 
 def upstream_classes():

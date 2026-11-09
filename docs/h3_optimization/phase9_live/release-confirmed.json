@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-11-09T12:56:27.506753+08:00",
+  "allocation": {
+    "id": "8c85f618db21457ca51490fe7c6da6b4",
+    "owner": "tree",
+    "pool": "scnet-dcu",
+    "state": "Cancelled",
+    "reason": "CLEANUP_CONFIRMED",
+    "spec": {
+      "mode": "nodes",
+      "count": 1,
+      "timeout": 3600,
+      "unit_cards": 8,
+      "development": "shell",
+      "credit_card_limit": 8,
+      "provider_unit_bindings": {
+        "unit8b:unit8b-0": {
+          "version": 1,
+          "profile": "provider-unit-native-v1",
+          "allocation": "8c85f618db21457ca51490fe7c6da6b4",
+          "unit_id": "provider-unit/dbef3790895c8125dcaa69fcbddc26cabbd76ef95116911b5155df159f9828a8",
+          "unit_pin": "4e5a177f20827f710993936f15d52030ecd8c1607e26a1053f864a38b5164860",
+          "certificate_sha256": "cf3eaeb969f639611697f563a10b8fea848b00222fd341c374e50f11e668d162",
+          "boot": "820aeb65-4ab3-4629-9d1c-568eb9e91a6b",
+          "lease_domain": "scnet/10.5.16.75",
+          "devices": [
+            "TS5V1525010401",
+            "TS5V1503070301",
+            "TS5V0614020201",
+            "TS5V1501030201",
+            "TS5V1320040201",
+            "TS5V1514030801",
+            "TS5V1320040101",
+            "TS5V0616060901"
+          ]
+        }
+      }
+    },
+    "created": 1794198249.9881885,
+    "deadline": 1794201853.894029,
+    "nodes": [
+      {
+        "node": "unit8b:unit8b-0",
+        "devices": [
+          "TS5V1525010401",
+          "TS5V1503070301",
+          "TS5V0614020201",
+          "TS5V1501030201",
+          "TS5V1320040201",
+          "TS5V1514030801",
+          "TS5V1320040101",
+          "TS5V0616060901"
+        ],
+        "cleaned": true,
+        "receipt": {
+          "state": "Released",
+          "reason": "CANCEL_REQUESTED",
+          "cleanup_confirmed": true,
+          "resource_scope": "provider-unit",
+          "deadline": 1794201853.894029,
+          "devices": [
+            "TS5V1525010401",
+            "TS5V1503070301",
+            "TS5V0614020201",
+            "TS5V1501030201",
+            "TS5V1320040201",
+            "TS5V1514030801",
+            "TS5V1320040101",
+            "TS5V0616060901"
+          ],
+          "uid": 230027,
+          "node": "unit8b-0",
+          "no_execution": false,
+          "metrics": {
+            "pids": 0,
+            "zombies": 0,
+            "threads": 0,
+            "rss_bytes": 0,
+            "sampled_at": 1794200135.9912715,
+            "memory_enforcement": "Provider cgroup; no platform per-task consumption cap"
+          },
+          "metering": {
+            "version": 1,
+            "attempt": "8c85f618db21457ca51490fe7c6da6b4",
+            "boot_id": "820aeb65-4ab3-4629-9d1c-568eb9e91a6b",
+            "started_ns": 4225636107480456,
+            "started_at": 1794198254.2846353,
+            "finished_ns": 4227512719614126,
+            "finished_at": 1794200130.8967695
+          },
+          "task": null,
+          "provider_unit_binding": {
+            "version": 1,
+            "profile": "provider-unit-native-v1",
+            "allocation": "8c85f618db21457ca51490fe7c6da6b4",
+            "unit_id": "provider-unit/dbef3790895c8125dcaa69fcbddc26cabbd76ef95116911b5155df159f9828a8",
+            "unit_pin": "4e5a177f20827f710993936f15d52030ecd8c1607e26a1053f864a38b5164860",
+            "certificate_sha256": "cf3eaeb969f639611697f563a10b8fea848b00222fd341c374e50f11e668d162",
+            "boot": "820aeb65-4ab3-4629-9d1c-568eb9e91a6b",
+            "lease_domain": "scnet/10.5.16.75",
+            "devices": [
+              "TS5V1525010401",
+              "TS5V1503070301",
+              "TS5V0614020201",
+              "TS5V1501030201",
+              "TS5V1320040201",
+              "TS5V1514030801",
+              "TS5V1320040101",
+              "TS5V0616060901"
+            ]
+          }
+        }
+      }
+    ],
+    "terminals": [
+      {
+        "id": "ceee76fa4cfd4ff8b1cfed695250de25",
+        "node": "unit8b:unit8b-0",
+        "state": "Closed",
+        "retained_until": null,
+        "export_error": null,
+        "export_prefix": "shell-ceee76fa4cfd4ff8b1cfed695250de25",
+        "archive_state": "Succeeded",
+        "cleanup_seconds": 0.051,
+        "archive_seconds": 1.303,
+        "archive_conflict": false
+      }
+    ]
+  },
+  "cleanup_confirmed": true
+}

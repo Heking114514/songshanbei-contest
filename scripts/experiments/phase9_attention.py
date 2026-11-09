@@ -1,6 +1,7 @@
 """Offline exact-layout policy and optional host dispatcher build; never requests a node."""
 from __future__ import annotations
 import argparse
+import copy
 import hashlib
 import json
 import math
@@ -134,6 +135,62 @@ def from_archive(path, minimum_gain=.03, tie_fraction=.02):
                     libraries={k:v for k,v in sorted(libraries.items()) if k in used}, rules=rules)
 
 
+def with_layout_evidence(policy, path):
+    """Add only the exact mixed-V layouts measured by the supplied live worker."""
+    policy = copy.deepcopy(policy)
+    raw = Path(path).read_bytes()
+    result = json.loads(raw)
+    if not (result.get("complete") and result.get("screening_pass")
+            and result.get("arch") == "gfx936" and result.get("layout") == "mixed-v"):
+        raise ValueError("Complete gfx936 mixed-V worker required")
+    if result["libraries"]["baseline"]["sha256"] != policy["baseline"]:
+        raise ValueError("Mixed-layout baseline mismatch")
+    candidate = result["libraries"]["candidate"]
+    digest = candidate["sha256"]
+    if digest not in policy["libraries"] or candidate["build_id"] != policy["libraries"][digest]["build_id"]:
+        raise ValueError("Mixed-layout candidate was not bound to the source archive")
+    rows = result["cases"]
+    if len(rows) != 3 or {(r["query"], r["key"]) for r in rows} != {(65,33),(708,708),(27570,27570)}:
+        raise ValueError("Incomplete or duplicate mixed-layout coverage")
+    source_digest = result.get("worker_source_sha256", "")
+    expected_source = sha(Path(__file__).with_name("phase8_attention_worker.py").read_bytes())
+    if source_digest != expected_source:
+        raise ValueError("Mixed-layout worker source changed")
+    for row in rows:
+        spec = shape_spec(row["query"], row["key"], False)
+        n = row["key"]
+        spec["strides"][2] = [n*7*128*3, 7*128*3, 128, 1]
+        if row["spec"] != spec or row["heads"] != 7 or row["padded"] or not row["repeat_bitwise"]:
+            raise ValueError("Mixed-layout spec or determinism mismatch")
+        for name in ("versus_v4", "graph_updated_inputs"):
+            metric = row[name]
+            if not metric["finite"] or not math.isfinite(metric["relative_l2"]) or not 0 <= metric["relative_l2"] <= .005:
+                raise ValueError("Mixed-layout numerical or graph failure")
+        if row["query"] == 65:
+            metric = row["versus_math_small"]
+            if not metric["finite"] or not 0 <= metric["relative_l2"] < .02:
+                raise ValueError("Mixed-layout MATH failure")
+        for name in ("baseline", "candidate", "graph"):
+            values = row[name]["samples_ms"]
+            if len(values) < 3 or not all(math.isfinite(v) and v > 0 for v in values):
+                raise ValueError("Invalid mixed-layout timing")
+            if not math.isclose(statistics.median(values), row[name]["median_ms"], rel_tol=1e-9):
+                raise ValueError("Mixed-layout median mismatch")
+        ratio = row["baseline"]["median_ms"] / row["candidate"]["median_ms"]
+        if not math.isclose(ratio, row["speedup"], rel_tol=1e-9):
+            raise ValueError("Mixed-layout speedup mismatch")
+        if any(r["spec"] == spec for r in policy["rules"]):
+            raise ValueError("Duplicate measured spec")
+        selected = ratio >= 1 + policy["minimum_gain"]
+        policy["rules"].append(dict(spec=spec, library=digest if selected else policy["baseline"],
+            candidate_id="live-mixed-v", worker_sha256=sha(raw), worker_source_sha256=source_digest,
+            measured_speedup=ratio, candidate_selected=selected,
+            versus_v4_relative_l2=row["versus_v4"]["relative_l2"],
+            graph_relative_l2=row["graph_updated_inputs"]["relative_l2"]))
+    policy["live_layout_evidence_sha256"] = sha(raw)
+    return policy
+
+
 def select(policy, spec):
     for row in policy["rules"]:
         if row["spec"] == spec:
@@ -180,6 +237,7 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--archive",type=Path)
     ap.add_argument("--output",type=Path)
+    ap.add_argument("--layout-evidence",type=Path)
     ap.add_argument("--verify-bundle",type=Path)
     ap.add_argument("--baseline",type=Path)
     ap.add_argument("--execute-build",action="store_true")
@@ -198,6 +256,8 @@ def main():
     if args.execute_build and (sys.platform != "linux" or not args.workspace_root or not args.baseline):
         ap.error("Build requires Linux private workspace and v4 baseline")
     policy=from_archive(args.archive)
+    if args.layout_evidence:
+        policy=with_layout_evidence(policy,args.layout_evidence)
     code=render(policy)
     out.mkdir(parents=True,exist_ok=False)
     (out/"policy.json").write_text(json.dumps(policy,indent=2)+"\n")

@@ -36,6 +36,7 @@ def main():
     ap.add_argument("--candidate", type=Path, required=True)
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--device", type=int, default=0)
+    ap.add_argument("--layout", choices=("legacy", "mixed-v"), default="legacy")
     ap.add_argument("--repeats", type=int, default=9)
     ap.add_argument("--max-relative-l2", type=float, default=0.005,
                     help="Local screening versus v4 only; not a media acceptance threshold")
@@ -51,7 +52,8 @@ def main():
     torch.set_grad_enabled(False)
     torch.manual_seed(4271)
     report = dict(complete=False, cases=[], device=args.device, arch="gfx936",
-                  torch=torch.__version__, hip=torch.version.hip, model_acceptance=False)
+                  torch=torch.__version__, hip=torch.version.hip, model_acceptance=False,
+                  layout=args.layout, worker_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
     def save():
@@ -109,14 +111,19 @@ def main():
 
     try:
         save()
-        for nq, nk in [(65, 33), (2048, 2048), (27570, 27570)]:
-            for padded in (False, True):
+        shapes = [(65, 33), (708, 708), (27570, 27570)] if args.layout == "mixed-v" else [(65, 33), (2048, 2048), (27570, 27570)]
+        for nq, nk in shapes:
+            for padded in ((False,) if args.layout == "mixed-v" else (False, True)):
                 torch.manual_seed(4271)
                 q, k, v = [torch.randn(1, n, 7 * (3 if padded else 1), 128,
                                         device="cuda", dtype=torch.bfloat16)
                            for n in (nq, nk, nk)]
                 if padded:
                     q, k, v = q[:, :, :7], k[:, :, 7:14], v[:, :, 14:21]
+                if args.layout == "mixed-v":
+                    # Match the real packed-QKV V view, including its nonzero storage offset.
+                    packed_v = torch.randn(1, nk, 21, 128, device="cuda", dtype=torch.bfloat16)
+                    v = packed_v[:, :, 14:21]
                 storage = [torch.full((1, nq, 7 * (2 if padded else 1), 128), float("nan"),
                                        device="cuda", dtype=torch.bfloat16) for _ in range(2)]
                 expected, actual = [x[:, :, :7] for x in storage]
@@ -156,6 +163,8 @@ def main():
                     row = dict(query=nq, key=nk, heads=7, padded=padded, versus_v4=error,
                                versus_math_small=math_error, graph_updated_inputs=updated,
                                repeat_bitwise=True, baseline=bt, candidate=ct, graph=gt,
+                               spec=dict(batch=1, query_tokens=nq, key_tokens=nk, heads=7,
+                                         strides=[list(t.stride()) for t in (q,k,v,actual)]),
                                speedup=bt["median_ms"]/ct["median_ms"])
                     report["cases"].append(row); save()
                     print("PHASE8_ATTENTION_CASE", json.dumps(row), flush=True)

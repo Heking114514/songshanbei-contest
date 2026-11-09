@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-11-09T12:46:37.252820+08:00",
+  "cpu_tests": {
+    "passed": 19,
+    "failed": 0,
+    "suite": "src/scripts/experiments/test_phase9_cpu.py",
+    "elapsed_seconds": 14.758,
+    "coverage": [
+      "exact mixed-layout routing",
+      "evidence rejection preserves source policy",
+      "Graph/numerical/timing/worker-source/library binding",
+      "real upstream loop replay",
+      "fake ABI lifecycle and errors"
+    ]
+  },
+  "source_files": {
+    "phase8_attention_worker.py": {
+      "sha256": "06fcdea34968775d0398b05bab1569d62c832f0200208a7b74f99449528d333f",
+      "bytes": 9371
+    },
+    "phase9_attention.py": {
+      "sha256": "f255ecd38d94b44054e0304383d80cf06229e62c6ab59fade8793b99598f0e1d",
+      "bytes": 15724
+    },
+    "test_phase9_cpu.py": {
+      "sha256": "46bfa6dc05f43296cf485669ac59bbe9ea2a2de9eac897cd34fb21f23315dfc2",
+      "bytes": 23324
+    }
+  },
+  "ast_pass": true,
+  "diff_check_pass": true
+}
