@@ -1,6 +1,6 @@
 # H3 第十阶段本地结构改造
 
-更新时间：2026-11-09T16:12:31+08:00（北京时间）。已验fa701ffd7cbcdc65303085b538b245a9a4c9a9e4已推送远端exp；本阶段新改动只留本地；后续用户授权实机已完成并释放，AFS只读，正式main未改。
+更新时间：2026-11-09T16:12:31+08:00（北京时间）。已验fa701ffd7cbcdc65303085b538b245a9a4c9a9e4已推送远端exp；后续用户授权实机已完成并释放，AFS只读；本轮发布目标为远端exp。
 
 新增phase10_flash_kernel/build_flash：完整KV块和尾块分离，可选V预取；旧BF16/FP32在线softmax顺序、真实mixed-V stride与ABI保留。构建器默认仅计划，--execute-build才编gfx936 AOT，独立插件不覆盖旧dispatcher。phase10_attention_worker固定第九阶段最佳bundle SHA，比较字段versus_previous_best，含重复/Graph/小形状math检查。
 
@@ -17,3 +17,5 @@ GEMM probe新增paired测量，phase10_gemm_timing提供基线/候选交错调�
 本轮统一批跑工具完成于2026-11-09T18:29:57.564721+08:00。phase10_batch默认计划、--execute才执行；16参数×2布局、前二同卡双复测、最多3次同上游完整生成、一次native profile与最多24份GEMM报告。phase10_jobs提供immutable attempts、15秒实时心跳、预算停启及产物SHA重新验证；phase10_runtime绑定真实子Python/native来源；evidence/promote只换双独立报告通过的精确layout；quality核49步首输入与124帧/24fps/32000Hz双声道契约，音质仍不自动验收。默认55分钟从恢复完成后开始，外层必须按租约deadline减去恢复/上传/回收预算；native缓存恢复后-j120零重编，本轮只另编AOT。56项CPU检查通过，其中83任务全矩阵及续跑是模拟子任务；用户随后追加授权新八卡实机验证，当前无新GPU性能结论、不push。
 
 本轮实机最终结果（2026-11-09T19:13:13.106854+08:00）：16新AOT/32布局/4同卡复测/两晋级/3完整生成/24GEMM报告全部执行，native1206对象-j120零重编。BM128/BN32/w4/s1/no-prefetch相对同轮最佳稳定步4.394951→4.015130秒，耗时下降8.642%；两候选49次DiT输入/视频/PCM/MP4字节一致。Lt无合格新算法。原自动profile因HIPOPS实际schema失败，离线显式adapter核8卡29877kernel；原失败不改写。303成员结果/冻结输入/raw DB本地验SHA，best-bundle可复用；AFS零新增，八卡Cancelled/CLEANUP_CONFIRMED，后续停下。完整证据位于外层phase10_live/run.md和preserve-list.md；不是所有输入/官方质量验收或无探针生产延迟。
+
+发布授权（2026-11-09T19:36:29.594933+08:00，北京时间）：用户要求将当前已验证方案提交并推送远端exp。本轮代码以cfe85b5为实测版本，4b5701b记录最终实机结果，发布包含这两者及本阶段结构候选。此次只同步Git；详细原始结果、冻结输入及原生数据库继续按外层phase10_live/preserve-list.md保留。
