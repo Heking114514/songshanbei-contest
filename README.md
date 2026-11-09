@@ -1,6 +1,6 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-更新时间：2026-11-09T18:36:08+08:00（北京时间）。
+更新时间：2026-11-09T19:19:32+08:00（北京时间）。
 
 统一首帧：`inputs/first_frame.png`；统一 FL2VA Prompt：**A dog falls asleep**。
 
@@ -8,7 +8,7 @@
 
 ### 1. 源码与依赖下载
 
-下载本仓库 **main 分支源码**，再从 [offline-wheel Release](https://github.com/Heking114514/songshanbei-contest/releases/tag/offline-wheel) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
+下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
 
 仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
 
