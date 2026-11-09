@@ -13,3 +13,5 @@ GEMM probe新增paired测量，phase10_gemm_timing提供基线/候选交错调�
 未来性能对照为4.394788秒/步的第九阶段最佳mixed-V包，manifest SHA：1f7aeecd37c092fae4fbd8a6adbfde667e6fcea56e3650c8ed2777e7f8d759e8。第九阶段相对第八阶段4.394925秒没有新增提速证据；19.70%包含VAE变化，固定VAE4的历史pipeline改善约12.4%–12.5%。音频23.2%/9.95%/4.45%不是同输入连续改进，音质未验收。
 
 规范操作入口为工作区handover/operations/phase10_local_optimization.md；旧phase9_local.md保留历史验证边界。后续按已有父链恢复native缓存，-j120精确增量守卫，不clean，本候选只另编AOT。
+
+本轮统一批跑工具完成于2026-11-09T18:29:57.564721+08:00。phase10_batch默认计划、--execute才执行；16参数×2布局、前二同卡双复测、最多3次同上游完整生成、一次native profile与最多24份GEMM报告。phase10_jobs提供immutable attempts、15秒实时心跳、预算停启及产物SHA重新验证；phase10_runtime绑定真实子Python/native来源；evidence/promote只换双独立报告通过的精确layout；quality核49步首输入与124帧/24fps/32000Hz双声道契约，音质仍不自动验收。默认55分钟从恢复完成后开始，外层必须按租约deadline减去恢复/上传/回收预算；native缓存恢复后-j120零重编，本轮只另编AOT。56项CPU检查通过，其中83任务全矩阵及续跑是模拟子任务；用户随后追加授权新八卡实机验证，当前无新GPU性能结论、不push。

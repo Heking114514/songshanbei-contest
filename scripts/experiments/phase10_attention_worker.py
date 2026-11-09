@@ -56,6 +56,7 @@ def main():
     torch.manual_seed(4271)
     report = dict(complete=False, cases=[], device=args.device, arch="gfx936",
                   torch=torch.__version__, hip=torch.version.hip, model_acceptance=False,
+                  device_name=properties.name, total_memory_bytes=properties.total_memory,
                   layout=args.layout, baseline_scope="phase9-best-dispatch",
                   baseline_bundle=bundle_receipt, worker_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -113,12 +114,33 @@ def main():
             values.append(start.elapsed_time(end))
         return dict(samples_ms=values, median_ms=statistics.median(values))
 
+    def paired_timing(base, candidate):
+        for _ in range(3):
+            base()
+            candidate()
+        torch.cuda.synchronize()
+        values = {"baseline": [], "candidate": [], "orders": []}
+        for index in range(args.repeats):
+            order = (("baseline", base), ("candidate", candidate)) if index % 2 == 0 else (
+                     ("candidate", candidate), ("baseline", base))
+            values["orders"].append([name for name, _ in order])
+            for name, fn in order:
+                start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+                start.record()
+                fn()
+                end.record()
+                end.synchronize()
+                values[name].append(start.elapsed_time(end))
+        return tuple(dict(samples_ms=values[name], median_ms=statistics.median(values[name]),
+                          paired_order=values["orders"]) for name in ("baseline", "candidate"))
+
     try:
         save()
         shapes = [(65, 33), (708, 708), (27570, 27570)] if args.layout == "mixed-v" else [(65, 33), (2048, 2048), (27570, 27570)]
         for nq, nk in shapes:
             for padded in ((False,) if args.layout == "mixed-v" else (False, True)):
                 torch.manual_seed(4271)
+                torch.cuda.reset_peak_memory_stats(args.device)
                 q, k, v = [torch.randn(1, n, 7 * (3 if padded else 1), 128,
                                         device="cuda", dtype=torch.bfloat16)
                            for n in (nq, nk, nk)]
@@ -154,7 +176,7 @@ def main():
                         math_error = metrics(actual, math_out)
                         if not math_error["finite"] or math_error["relative_l2"] >= 0.02:
                             raise AssertionError(math_error)
-                    bt, ct = timing(br), timing(cr)
+                    bt, ct = paired_timing(br, cr)
                     graph = torch.cuda.CUDAGraph()
                     with torch.cuda.graph(graph):
                         cr()
@@ -169,7 +191,9 @@ def main():
                                repeat_bitwise=True, baseline=bt, candidate=ct, graph=gt,
                                spec=dict(batch=1, query_tokens=nq, key_tokens=nk, heads=7,
                                          strides=[list(t.stride()) for t in (q,k,v,actual)]),
-                               speedup=bt["median_ms"]/ct["median_ms"])
+                               speedup=bt["median_ms"]/ct["median_ms"],
+                               peak_allocated_bytes=torch.cuda.max_memory_allocated(args.device),
+                               peak_reserved_bytes=torch.cuda.max_memory_reserved(args.device))
                     report["cases"].append(row); save()
                     print("PHASE10_ATTENTION_CASE", json.dumps(row), flush=True)
                     del graph

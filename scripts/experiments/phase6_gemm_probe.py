@@ -60,6 +60,9 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     # Independent C descriptors, never inherit a production table.
     os.environ.pop("H3_GEMM_LT_TABLE", None)
+    # The backend currently permits explicit indices when no table is supplied.
+    # Make this offline intent explicit; production keeps table-only enabled.
+    os.environ["H3_GEMM_LT_TABLE_ONLY"] = "0"
     os.environ["H3_GEMM_LT_TRACE"] = "0"
     os.environ["H3_GEMM_LT_MIN_TOKENS"] = "4096"
     os.environ["H3_GEMM_LT_ALIGNMENT"] = "16"

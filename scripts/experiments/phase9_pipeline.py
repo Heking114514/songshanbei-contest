@@ -25,12 +25,14 @@ def parse_steps(text):
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--execute",action="store_true")
+    ap.add_argument("--verify-runtime",action="store_true",help="Require prepared private Python/native origins")
     ap.add_argument("--workspace-root",type=Path,required=True)
     ap.add_argument("--output",type=Path,required=True)
     ap.add_argument("--freeze-mode",choices=("capture","replay"))
     ap.add_argument("--freeze-dir",type=Path,help="Replay source directory; capture always uses output/upstream")
     ap.add_argument("--freeze-budget-mib",type=int,default=512)
     ap.add_argument("--profile-steps",default="",help="e.g. 2,3; separate diagnostic runs from timing runs")
+    ap.add_argument("--capture-dit-step", type=int, help="Save one exact CPU DiT input for later standalone profiling")
     ap.add_argument("--time-steps",action="store_true",help="Synchronize every DiT call; perturbing diagnostic timer")
     ap.add_argument("--dispatch-bundle",type=Path)
     ap.add_argument("generation_args",nargs=argparse.REMAINDER)
@@ -41,6 +43,7 @@ def main():
         ap.error("Pass native generation args after --; output is managed by wrapper")
     if (args.freeze_mode=="replay")!=(args.freeze_dir is not None):
         ap.error("--freeze-dir is required only for replay")
+    if args.capture_dit_step is not None and args.capture_dit_step < 0: ap.error("Capture step must be nonnegative")
     if args.freeze_budget_mib<=0: ap.error("Positive freeze budget required")
     selected=parse_steps(args.profile_steps)
     output=private_output(args.workspace_root,args.output)
@@ -54,6 +57,7 @@ def main():
         output.mkdir(parents=True,exist_ok=False)
         (output/"plan.json").write_text(json.dumps(dict(execute=False,arguments=argv,
             source_sha256=source_files,freeze_mode=args.freeze_mode,profile_steps=sorted(selected),
+            capture_dit_step=args.capture_dit_step,
             synchronized_step_timing=args.time_steps,dispatch_bundle=str(bundle) if bundle else None,
             model_acceptance=False),indent=2)+"\n")
         print("PHASE9_PLAN_ONLY",output,flush=True);return
@@ -74,7 +78,7 @@ def main():
         if arch!="gfx936": ap.error("Actual gfx936 required on every selected device")
     output.mkdir(parents=True,exist_ok=False)
     run=dict(complete=False,arguments=argv,source_sha256=source_files,devices=devices,
-             diagnostic=bool(selected or args.freeze_mode or args.time_steps),
+             diagnostic=bool(selected or args.freeze_mode or args.time_steps or args.capture_dit_step is not None),
              profile_steps=sorted(selected),profiled_steps=[],step_records=[],
              torch=torch.__version__,hip=torch.version.hip,model_acceptance=False,
              synchronized_step_timing=args.time_steps,
@@ -82,6 +86,9 @@ def main():
                           "Profile and input hashing are diagnostics, not production timing."])
     freezer=FrozenLoop(args.freeze_mode,replay or output/"upstream",output,
                       budget_mib=args.freeze_budget_mib) if args.freeze_mode else None
+    if args.verify_runtime:
+        from phase10_runtime import origins
+        run["runtime_origins"]=origins(args.workspace_root,Path(os.environ["INFINI_ROOT"]))
     original_prepare=entry.prepare_generation_inputs
     original_call=entry.MiniMaxH3TransformerRunner.__call__
     original_report=entry.TimingReport.print_report
@@ -97,6 +104,20 @@ def main():
     def called(owner,inputs,*a,**kw):
         step=len(run["step_records"])
         if freezer: freezer.observe(inputs)
+        if step == args.capture_dit_step:
+            from dataclasses import fields
+            path = output / "dit-input.pt"
+            if path.exists(): raise RuntimeError("Refusing to overwrite DiT snapshot")
+            tensors = {f.name: getattr(inputs, f.name).detach().cpu().clone() for f in fields(inputs)}
+            size = sum(t.numel() * t.element_size() for t in tensors.values())
+            if size > args.freeze_budget_mib * (1 << 20):
+                raise RuntimeError("DiT snapshot exceeds configured budget")
+            torch.save(tensors, path)
+            if path.stat().st_size > args.freeze_budget_mib * (1 << 20):
+                raise RuntimeError("Serialized DiT snapshot exceeds configured budget")
+            run["dit_snapshot"] = dict(step=step, path=str(path), bytes=path.stat().st_size,
+                                      transformer_path=str(owner.transformer_path),
+                                      sha256=hashlib.sha256(path.read_bytes()).hexdigest())
         if args.time_steps: sync()
         started=time.perf_counter()
         if step in selected:
@@ -142,6 +163,8 @@ def main():
             entry.MiniMaxH3TransformerRunner.__call__=called
             sys.argv=[str(entry_path),*argv,"--output",str(output/"output.mp4")]
             entry.main()
+            if args.capture_dit_step is not None and "dit_snapshot" not in run:
+                raise RuntimeError("Requested DiT snapshot step was not executed")
             if set(run["profiled_steps"])!=selected: raise RuntimeError("Requested profile steps were not executed")
             run["media_sha256"]=hashlib.sha256((output/"output.mp4").read_bytes()).hexdigest()
             if args.time_steps and not selected:

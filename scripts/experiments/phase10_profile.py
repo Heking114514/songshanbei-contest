@@ -135,6 +135,9 @@ def analyze(paths, expected, table=None):
 
 
 def relay(command, output):
+    def terminate(signum, frame):
+        raise KeyboardInterrupt("Native profiler received termination signal")
+    previous = signal.signal(signal.SIGTERM, terminate) if sys.platform == "linux" else None
     started = time.monotonic()
     with (output / "trace.log").open("x", encoding="utf-8", newline="\n") as log:
         process = subprocess.Popen(command, cwd=output, stdout=subprocess.PIPE,
@@ -167,16 +170,20 @@ def relay(command, output):
                 print(line, end="", flush=True)
             return process.wait()
         except BaseException:
-            os.killpg(process.pid, signal.SIGTERM)
+            try: os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError: pass
             try:
-                process.wait(timeout=15)
+                process.wait(timeout=1)
             except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
                 process.wait()
             raise
         finally:
             process.stdout.close()
             thread.join(timeout=1)
+            if previous is not None:
+                signal.signal(signal.SIGTERM, previous)
 
 
 def main():
