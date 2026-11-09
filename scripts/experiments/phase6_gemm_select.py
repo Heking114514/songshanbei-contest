@@ -13,13 +13,16 @@ import math
 from pathlib import Path
 import statistics
 from zoneinfo import ZoneInfo
+from phase10_gemm_timing import paired_gain
 
 
-def select(reports, min_gain=0.02, min_reports=2):
+def select(reports, min_gain=0.02, min_reports=2, require_paired=False):
     groups = defaultdict(list)
     for report_id, report in enumerate(reports):
         if not report.get("complete") or not report.get("lt_executed"):
             raise ValueError("Incomplete or non-Lt probe report")
+        if require_paired and report.get("timing_mode") != "paired":
+            raise ValueError("Paired selection requires new paired probe reports")
         by_key = defaultdict(list)
         for case in report["cases"]:
             candidates = case["candidates"]
@@ -63,7 +66,15 @@ def select(reports, min_gain=0.02, min_reports=2):
                         and item.get("vs_baseline", {}).get("finite") is True
                         and item.get("unaligned_rejected_before_write") is True
                         and math.isfinite(ms) and ms > 0):
-                    choices[index] = (ms, 1.0 - ms / base_ms)
+                    if require_paired:
+                        try:
+                            gain = paired_gain(item)
+                        except (ValueError, KeyError, TypeError):
+                            choices[index] = None
+                            continue
+                    else:
+                        gain = 1.0 - ms / base_ms
+                    choices[index] = (ms, gain)
                 else:
                     choices[index] = None
             by_key[key].append({"scalars": (case["alpha"], case["beta"]), "choices": choices, "base_ms": base_ms})
@@ -95,6 +106,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--min-gain", type=float, default=0.02)
     parser.add_argument("--min-reports", type=int, default=2)
+    parser.add_argument("--require-paired", action="store_true")
     args = parser.parse_args()
     if not math.isfinite(args.min_gain) or not 0 <= args.min_gain < 1 or args.min_reports < 1:
         parser.error("min-gain must be finite in [0,1); min-reports >= 1")
@@ -106,7 +118,7 @@ def main():
             raise ValueError("Duplicate report cannot count as another run")
         sources.append({"path": str(path.resolve()), "sha256": sha})
         reports.append(json.loads(data))
-    selected = select(reports, args.min_gain, args.min_reports)
+    selected = select(reports, args.min_gain, args.min_reports, args.require_paired)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# H3 Lt strict allowlist; frozen DiT/TP8 verification still required.",
              "# Exact runtime/device/shape/strides/workspace/alignment key = raw heuristic index"]
@@ -115,7 +127,8 @@ def main():
     args.output.write_text("\n".join(lines) + "\n")
     receipt = {"at": datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(), "sources": sources,
                "selected": selected, "model_acceptance": False,
-               "min_gain": args.min_gain, "min_reports": args.min_reports}
+               "min_gain": args.min_gain, "min_reports": args.min_reports,
+               "require_paired": args.require_paired}
     args.output.with_suffix(args.output.suffix+".json").write_text(json.dumps(receipt, indent=2)+"\n")
     print("PHASE6_POLICY_WRITTEN", len(selected), "model_acceptance=false", flush=True)
 

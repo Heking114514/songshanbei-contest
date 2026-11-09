@@ -15,6 +15,7 @@ from pathlib import Path
 import statistics
 import time
 from zoneinfo import ZoneInfo
+from phase10_gemm_timing import bracketed
 
 
 def fingerprint(paths, torch_version):
@@ -42,11 +43,14 @@ def main():
     parser.add_argument("--workspace-mb", type=int, nargs="+", default=[32], choices=(0, 8, 32, 64, 128, 256))
     parser.add_argument("--indices", default="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15")
     parser.add_argument("--repeats", type=int, default=7)
+    parser.add_argument("--timing-mode", choices=("serial", "paired"), default="serial",
+                        help="paired brackets every candidate with fresh BLAS event timings")
+    parser.add_argument("--warmup", type=int, default=3)
     args = parser.parse_args()
     indices = list(dict.fromkeys(map(int, args.indices.split(","))))
     args.workspace_mb = list(dict.fromkeys(args.workspace_mb))
-    if not indices or any(i < 0 or i > 15 for i in indices) or args.repeats < 3:
-        parser.error("indices must be 0..15; repeats >= 3")
+    if not indices or any(i < 0 or i > 15 for i in indices) or args.repeats < 3 or args.warmup < 3:
+        parser.error("indices must be 0..15; repeats and warmup >= 3")
     work, root, output = map(lambda p: p.resolve(), (args.workspace_root, args.library_root, args.output))
     afs = os.environ.get("IFAB_AFS_HOME")
     if afs and work.is_relative_to(Path(afs).resolve()):
@@ -69,6 +73,7 @@ def main():
     report = {"at": datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(),
               "complete": False, "scope": "synthetic GEMM screening, not DiT acceptance",
               "workspace_mb": args.workspace_mb, "indices": indices,
+              "timing_mode": args.timing_mode, "warmup": args.warmup,
               "gpu": torch.cuda.get_device_name(), "device": args.device, "torch": torch.__version__,
               "torch_hip": getattr(torch.version, "hip", None),
               "cases": [], "afs_modified": False}
@@ -163,84 +168,109 @@ def main():
                         report["cases"].append(row)
                         print("PHASE6_START", json.dumps({"shape": shape, "alpha": alpha, "beta": beta}), flush=True)
                         baseline = None
-                        for index in [-1] + indices:
-                            os.environ["H3_EXPERIMENT_GEMM_LT"] = "0" if index == -1 else "1"
-                            os.environ["H3_GEMM_LT_INDEX"] = str(max(index, 0))
-                            desc = ptr()
-                            status = lib.infiniopCreateGemmDescriptor(handle, C.byref(desc), *descriptors)
-                            receipt = json.loads(lib.h3GemmLtLastSelection())
-                            item = {"index": index, "selection": receipt, "create_status": status}
-                            row["candidates"].append(item)
-                            if status:
-                                if index == -1 or status != 2:
-                                    raise RuntimeError(f"Descriptor creation failed: {item}")
+                        baseline_descriptor = None
+                        baseline_runner = None
+                        try:
+                            for index in [-1] + indices:
+                                os.environ["H3_EXPERIMENT_GEMM_LT"] = "0" if index == -1 else "1"
+                                os.environ["H3_GEMM_LT_INDEX"] = str(max(index, 0))
+                                desc = ptr()
+                                status = lib.infiniopCreateGemmDescriptor(handle, C.byref(desc), *descriptors)
+                                receipt = json.loads(lib.h3GemmLtLastSelection())
+                                item = {"index": index, "selection": receipt, "create_status": status}
+                                row["candidates"].append(item)
+                                if status:
+                                    if index == -1 or status != 2:
+                                        raise RuntimeError(f"Descriptor creation failed: {item}")
+                                    save()
+                                    print("PHASE6_SKIP", json.dumps(item), flush=True)
+                                    continue
+                                if index == -1 and args.timing_mode == "paired":
+                                    baseline_descriptor = desc
+                                try:
+                                    if receipt["backend"] != ("blas" if index == -1 else "lt"):
+                                        raise RuntimeError(f"Unexpected fallback: {receipt}")
+                                    workspace_bytes = size()
+                                    check(lib.infiniopGetGemmWorkspaceSize(desc, C.byref(workspace_bytes)), "workspace")
+                                    if workspace_bytes.value > workspace_mb * (1 << 20):
+                                        raise RuntimeError("Workspace exceeds requested budget")
+                                    workspace = torch.empty(max(1, workspace_bytes.value), device="cuda", dtype=torch.uint8)
+                                    stream = torch.cuda.current_stream()
+
+                                    def run(descriptor=desc, scratch=workspace, scratch_bytes=workspace_bytes.value):
+                                        # Reset is ordered on the same stream, before timing.
+                                        c.copy_(initial)
+                                        start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+                                        start.record(stream)
+                                        start_wall = time.perf_counter()
+                                        check(lib.infiniopGemm(
+                                            descriptor, scratch.data_ptr(), scratch_bytes,
+                                            c.data_ptr(), a.data_ptr(), b.data_ptr(), alpha, beta,
+                                            stream.cuda_stream), "GEMM execution")
+                                        end.record(stream)
+                                        end.synchronize()
+                                        return start.elapsed_time(end), time.perf_counter() - start_wall
+
+                                    if index == -1 and args.timing_mode == "paired":
+                                        baseline_runner = run
+                                    for _ in range(args.warmup):
+                                        run()
+                                    first = c.clone()
+                                    run()
+                                    item["repeat"] = metrics(c, first)
+                                    if index == -1:
+                                        baseline = first
+                                        row["baseline_repeat_bitwise"] = item["repeat"]["bitwise_equal"]
+                                    item["vs_baseline"] = metrics(c, baseline)
+                                    if not item["repeat"]["finite"]:
+                                        raise RuntimeError("Nonfinite GEMM output")
+                                    samples = []
+                                    all_repeats_equal = item["repeat"]["bitwise_equal"]
+                                    if args.timing_mode == "paired" and index >= 0:
+                                        item["paired"] = bracketed(
+                                            baseline_runner, run,
+                                            lambda: metrics(c, baseline)["bitwise_equal"],
+                                            lambda: metrics(c, first)["bitwise_equal"],
+                                            args.repeats, args.warmup)
+                                        samples = [(s["candidate_gpu_ms"], s["candidate_wall_seconds"])
+                                                   for s in item["paired"]["samples"]]
+                                        all_repeats_equal &= all(s["candidate_bitwise"] and s["baseline_bitwise"]
+                                                                for s in item["paired"]["samples"])
+                                    else:
+                                        for _ in range(args.repeats):
+                                            samples.append(run())
+                                            all_repeats_equal &= metrics(c, first)["bitwise_equal"]
+                                    item["all_repeats_bitwise_equal"] = bool(all_repeats_equal)
+                                    item["gpu_ms"] = [x[0] for x in samples]
+                                    item["wall_seconds"] = [x[1] for x in samples]
+                                    item["median_gpu_ms"] = statistics.median(item["gpu_ms"])
+                                    item["workspace_bytes"] = workspace_bytes.value
+                                    item["strict_eligible"] = (row["baseline_repeat_bitwise"]
+                                        and all_repeats_equal and item["vs_baseline"]["bitwise_equal"])
+                                    if index == -1:
+                                        row["baseline_repeat_bitwise"] = bool(all_repeats_equal)
+                                    # Check alignment preflight does not touch C.
+                                    if index >= 0:
+                                        before = c.clone()
+                                        bad_status = lib.infiniopGemm(
+                                            desc, workspace.data_ptr(), workspace_bytes.value,
+                                            c.data_ptr(), a.data_ptr() + 2, b.data_ptr(), alpha, beta,
+                                            stream.cuda_stream)
+                                        check(0 if bad_status == 3 else 1, "unaligned pointer rejection")
+                                        torch.cuda.synchronize()
+                                        if not metrics(c, before)["bitwise_equal"]:
+                                            raise RuntimeError("C changed after preflight rejection")
+                                        item["unaligned_rejected_before_write"] = True
+                                finally:
+                                    if not (index == -1 and args.timing_mode == "paired"):
+                                        check(lib.infiniopDestroyGemmDescriptor(desc), "destroy GEMM")
                                 save()
-                                print("PHASE6_SKIP", json.dumps(item), flush=True)
-                                continue
-                            try:
-                                if receipt["backend"] != ("blas" if index == -1 else "lt"):
-                                    raise RuntimeError(f"Unexpected fallback: {receipt}")
-                                workspace_bytes = size()
-                                check(lib.infiniopGetGemmWorkspaceSize(desc, C.byref(workspace_bytes)), "workspace")
-                                if workspace_bytes.value > workspace_mb * (1 << 20):
-                                    raise RuntimeError("Workspace exceeds requested budget")
-                                workspace = torch.empty(max(1, workspace_bytes.value), device="cuda", dtype=torch.uint8)
-                                stream = torch.cuda.current_stream()
-
-                                def run():
-                                    # Reset is ordered on the same stream, before timing.
-                                    c.copy_(initial)
-                                    start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-                                    start.record(stream)
-                                    start_wall = time.perf_counter()
-                                    check(lib.infiniopGemm(
-                                        desc, workspace.data_ptr(), workspace_bytes.value,
-                                        c.data_ptr(), a.data_ptr(), b.data_ptr(), alpha, beta,
-                                        stream.cuda_stream), "GEMM execution")
-                                    end.record(stream)
-                                    end.synchronize()
-                                    return start.elapsed_time(end), time.perf_counter() - start_wall
-
-                                run()
-                                first = c.clone()
-                                run()
-                                item["repeat"] = metrics(c, first)
-                                if index == -1:
-                                    baseline = first
-                                    row["baseline_repeat_bitwise"] = item["repeat"]["bitwise_equal"]
-                                item["vs_baseline"] = metrics(c, baseline)
-                                if not item["repeat"]["finite"]:
-                                    raise RuntimeError("Nonfinite GEMM output")
-                                samples = []
-                                all_repeats_equal = item["repeat"]["bitwise_equal"]
-                                for _ in range(args.repeats):
-                                    samples.append(run())
-                                    all_repeats_equal &= metrics(c, first)["bitwise_equal"]
-                                item["all_repeats_bitwise_equal"] = bool(all_repeats_equal)
-                                item["gpu_ms"] = [x[0] for x in samples]
-                                item["wall_seconds"] = [x[1] for x in samples]
-                                item["median_gpu_ms"] = statistics.median(item["gpu_ms"])
-                                item["workspace_bytes"] = workspace_bytes.value
-                                item["strict_eligible"] = (row["baseline_repeat_bitwise"]
-                                    and all_repeats_equal and item["vs_baseline"]["bitwise_equal"])
-                                if index == -1:
-                                    row["baseline_repeat_bitwise"] = bool(all_repeats_equal)
-                                # Check alignment preflight does not touch C.
-                                if index >= 0:
-                                    before = c.clone()
-                                    bad_status = lib.infiniopGemm(
-                                        desc, workspace.data_ptr(), workspace_bytes.value,
-                                        c.data_ptr(), a.data_ptr() + 2, b.data_ptr(), alpha, beta,
-                                        stream.cuda_stream)
-                                    check(0 if bad_status == 3 else 1, "unaligned pointer rejection")
-                                    torch.cuda.synchronize()
-                                    if not metrics(c, before)["bitwise_equal"]:
-                                        raise RuntimeError("C changed after preflight rejection")
-                                    item["unaligned_rejected_before_write"] = True
-                            finally:
-                                check(lib.infiniopDestroyGemmDescriptor(desc), "destroy GEMM")
-                            save()
-                            print("PHASE6_RESULT", json.dumps(item), flush=True)
+                                print("PHASE6_RESULT", json.dumps(item), flush=True)
+                        finally:
+                            if baseline_descriptor is not None:
+                                check(lib.infiniopDestroyGemmDescriptor(baseline_descriptor),
+                                      "destroy paired baseline")
+                            baseline_runner = None
                 finally:
                     for desc in descriptors:
                         check(lib.infiniopDestroyTensorDescriptor(desc), "destroy tensor")

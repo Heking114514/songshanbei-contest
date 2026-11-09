@@ -47,7 +47,10 @@ def summarize(trace):
         cat=event.get("cat","").lower()
         if cat not in ("kernel","gpu_kernel","gpu_memcpy","gpu_memset"): continue
         arguments=event.get("args",{})
-        device=str(arguments.get("device",arguments.get("Device Id",event.get("pid","unknown"))))
+        device=arguments.get("device",arguments.get("Device Id"))
+        if isinstance(device,bool) or not str(device).isdigit():
+            raise ValueError("GPU event needs an explicit nonnegative device ID; pid is not a device")
+        device=str(int(device))
         kind="memory" if cat in ("gpu_memcpy","gpu_memset") else category(event.get("name",""))
         start=float(event["ts"]); end=start+float(event["dur"])
         if not math.isfinite(start) or not math.isfinite(end) or end<start: raise ValueError("Invalid GPU interval")

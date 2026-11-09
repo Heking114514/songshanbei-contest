@@ -11,3 +11,5 @@
 完整记录在工作区experiments/h3-opt-20261107-220727/phase9_live3/run.md，保留清单同目录preserve-list.md。本地results.tar.gz 85成员全部验SHA，冻结包21.4MB已验内外SHA，phase9-dispatch-mixed全bundle已回收。AFS父final-v2、round2-v4-delta、本地audio8-native-delta及attention36.tar.gz仍必须保留。每次新租约按父链恢复并核零编译，不复用过期sid。
 
 Git分支experiment/h3-phase9-local；初稿62efba4已在用户撤回前推送exp，本次mixed布局修正只提交本地。最终提交见仓库外phase9_live3/git-local-final.json。正式交接当前正文为handover/operations/phase9_local_optimization.md。
+
+2026-11-09T16:12:31+08:00状态更新：用户重新授权推送，fa701ff已推远端exp并核实一致；后续第十阶段只存本地且不上机，详见[本地改造](phase10_local.md)。第九阶段是恢复第八阶段已有约4.395秒/步，不能报告新增提速。
