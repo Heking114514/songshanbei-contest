@@ -1,6 +1,6 @@
 # songshanbei-contest
 
-更新时间：2026-11-09T11:12:27+08:00（北京时间）。
+更新时间：2026-11-09T15:24:04+08:00（北京时间）。
 
 ## 嵩山杯 MiniMax-H3 FL2VA 初赛
 
@@ -38,6 +38,49 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ~~~
 
 ZIP 内为 `offline-wheels/` 目录及 55 个 wheel，脚本直接解压到**节点**的 `work/downloads/`，不会在 AFS 展开一份依赖。也兼容已解压的 `songshanbei-contest/offline-wheels/*.whl`；两种方式选一种即可，同时存在且目录中有wheel时优先使用该目录；只有README的目录不影响ZIP识别。请勿把 ZIP 放在 `offline-wheels/` 内。
+
+### 从下载到运行的完整命令
+
+下面分为两个执行位置：先在本地 Git Bash 下载，再上传文件；申请八卡后，在新的 Bash 终端运行。私有仓库和 Release 需要账号具备读取权限；也可在浏览器登录后下载源码和 ZIP。
+
+~~~bash
+# 1. 本地 Git Bash：获取 main 源码。
+git clone --branch main --single-branch \
+  https://github.com/Heking114514/songshanbei-contest.git
+cd songshanbei-contest
+
+# 下载离线依赖；也可以从 Release 页面手动下载。
+curl -fL --retry 3 -C - \
+  -o h3-offline-wheels-linux-cp311.zip \
+  "https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip"
+
+# 2. 将整个 songshanbei-contest 文件夹上传到个人 AFS 根目录。
+# 源码保持展开，依赖 ZIP 保持原名、不解压。
+# 上传后 run_submission.sh 和 ZIP 必须同级：
+# 个人AFS/songshanbei-contest/run_submission.sh
+# 个人AFS/songshanbei-contest/h3-offline-wheels-linux-cp311.zip
+# 其余源码目录也全部保留。
+
+# 3. 申请独占 8 卡，打开新的 Bash。
+# 下面这一行在新终端初始目录执行，不要先 cd。
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
+
+# 脚本自动完成源码暂存、ZIP解压、环境准备、-j120编译、
+# 完整八卡推理、视频检查与AFS保存；无需手工切换环境。
+# 首帧：inputs/first_frame.png
+# Prompt：A dog falls asleep
+# 完整模型、8卡、seed42、50步请求、124帧。
+
+# 4. 末行 pipeline_rc=0 save_rc=0 表示运行和保存成功。
+# 在 AFS 文件管理下载以下目录中的 result.mp4：
+# 个人AFS/h3-results/run-时间戳-进程号/
+# generation.log 是推理日志，workflow.log 是全流程日志。
+# invocation.json、native-check.json 记录参数与视频检查；
+# submission-status.json、saved-manifest.json 记录状态与保存清单。
+# 确认结果保存后，释放八卡资源。
+~~~
+
+默认不加 check。本轮验收将视频下载后在本地运行官方比较器；若需要在八卡流程内比较，使用下节的 check 命令。两种方式无需同时执行。
 
 ### 需要官方比较时
 
