@@ -1,0 +1,27 @@
+test_compiled_fake_children_route_errors_and_plan_lifetime (__main__.DispatcherTests.test_compiled_fake_children_route_errors_and_plan_lifetime) ... ok
+test_actual_loop_replay_same_model_is_bitwise_equal (__main__.FreezeTests.test_actual_loop_replay_same_model_is_bitwise_equal) ... ok
+test_candidate_recurrence_is_not_overwritten_each_step (__main__.FreezeTests.test_candidate_recurrence_is_not_overwritten_each_step) ... ok
+test_contract_and_snapshot_tampering_rejected (__main__.FreezeTests.test_contract_and_snapshot_tampering_rejected) ... ok
+test_first_input_and_incomplete_capture_rejected (__main__.FreezeTests.test_first_input_and_incomplete_capture_rejected) ... ok
+test_resolved_model_config_changes_are_bound (__main__.FreezeTests.test_resolved_model_config_changes_are_bound) ... ok
+test_same_content_different_node_paths_contract (__main__.FreezeTests.test_same_content_different_node_paths_contract) ... ok
+test_schema_dtype_and_unknown_object_rejected (__main__.FreezeTests.test_schema_dtype_and_unknown_object_rejected) ... ok
+test_bundle_content_and_missing_file_rejected (__main__.PolicyTests.test_bundle_content_and_missing_file_rejected) ... ok
+test_changed_worker_archive_is_rejected (__main__.PolicyTests.test_changed_worker_archive_is_rejected) ... ok
+test_exact_layout_unknowns_use_baseline (__main__.PolicyTests.test_exact_layout_unknowns_use_baseline) ... ok
+test_negative_policy_parameters (__main__.PolicyTests.test_negative_policy_parameters) ... ok
+test_rejects_incomplete_numerical_graph_and_timing_errors (__main__.PolicyTests.test_rejects_incomplete_numerical_graph_and_timing_errors) ... ok
+test_render_refuses_path_injection (__main__.PolicyTests.test_render_refuses_path_injection) ... ok
+test_memory_only_trace_does_not_claim_native_kernels (__main__.ProfileTests.test_memory_only_trace_does_not_claim_native_kernels) ... ok
+test_no_gpu_events_and_bad_intervals (__main__.ProfileTests.test_no_gpu_events_and_bad_intervals) ... ok
+test_union_and_overlap_do_not_double_count (__main__.ProfileTests.test_union_and_overlap_do_not_double_count) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 12.642s
+
+OK
+H3_FLASH_DISPATCH b=1 q=65 k=33 heads=7 route=measured child=candidate strides=58240,896,128,1,29568,896,128,1,29568,896,128,1,58240,896,128,1
+H3_FLASH_DISPATCH b=1 q=65 k=33 heads=7 route=baseline-unmeasured child=baseline strides=58240,896,128,1,29569,896,128,1,29568,896,128,1,58240,896,128,1
+H3_FLASH_DISPATCH b=1 q=66 k=33 heads=7 route=baseline-unmeasured child=baseline strides=59136,896,128,1,29568,896,128,1,29568,896,128,1,59136,896,128,1
+H3_FLASH_DISPATCH_ERROR child ABI/build mismatch
+H3_FLASH_DISPATCH_ERROR child load failed: D:\Desktop\songshan workspace\experiments\h3-opt-20261107-220727\phase9\host-test-assets\abi-bxfeudq_\0000000000000000000000000000000000000000000000000000000000000000.so

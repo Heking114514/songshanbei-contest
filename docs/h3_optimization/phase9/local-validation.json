@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-11-09T08:32:51.900214+08:00",
+  "checks": {
+    "ast:phase9_attention.py": true,
+    "ast:phase9_freeze.py": true,
+    "ast:phase9_pipeline.py": true,
+    "ast:phase9_profile.py": true,
+    "ast:test_phase9_cpu.py": true,
+    "help_without_torch_or_platform:phase9_attention.py": true,
+    "help_without_torch_or_platform:phase9_pipeline.py": true,
+    "help_without_torch_or_platform:phase9_profile.py": true,
+    "pipeline_plan_only": true,
+    "execute_refuses_windows_before_model_load": true,
+    "phase9_cpu_17_passed": true,
+    "phase8_cpu_23_passed": true,
+    "bash_syntax": true,
+    "bash_source_no_export_side_effects": true
+  },
+  "gpu_tested": false,
+  "server_contacted": false,
+  "afs_accessed": false,
+  "native_linux_plugin_compiled": false,
+  "host_fake_abi_compiled": true,
+  "limits": "Host fake children validate dispatch/ABI only; no HIP/gfx936 or full generation validation."
+}

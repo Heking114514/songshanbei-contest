@@ -1,0 +1,28 @@
+test_close_preserves_replacement_and_still_releases_workers (__main__.TestControllerLifecycle.test_close_preserves_replacement_and_still_releases_workers) ... ok
+test_close_restores_original_instance_method (__main__.TestControllerLifecycle.test_close_restores_original_instance_method) ... ok
+test_partial_initialization_closes_threads_and_restores_method (__main__.TestControllerLifecycle.test_partial_initialization_closes_threads_and_restores_method) ... ok
+test_36_unique_and_baseline_first (__main__.TestSweep.test_36_unique_and_baseline_first) ... ok
+test_cached_worker_is_bound_to_result_and_libraries (__main__.TestSweep.test_cached_worker_is_bound_to_result_and_libraries) ... ok
+test_default_off_and_invalid_flags (__main__.TestTileSemantics.test_default_off_and_invalid_flags) ... ok
+test_missing_duplicate_and_out_of_order (__main__.TestTileSemantics.test_missing_duplicate_and_out_of_order) ... ok
+test_mixed_dtype_replica_and_tied_weights (__main__.TestTileSemantics.test_mixed_dtype_replica_and_tied_weights) ... ok
+test_real_geometry_is_latent_aligned (__main__.TestTileSemantics.test_real_geometry_is_latent_aligned) ... ok
+test_spatial_matches_actual_upstream_with_overlaps_tails_and_batches (__main__.TestTileSemantics.test_spatial_matches_actual_upstream_with_overlaps_tails_and_batches) ... ok
+test_temporal_reference_order_and_padding_preserved (__main__.TestTileSemantics.test_temporal_reference_order_and_padding_preserved) ... ok
+test_bfloat16_scalar_and_noncontiguous_bytes (__main__.TestTrace.test_bfloat16_scalar_and_noncontiguous_bytes) ... ok
+test_context_restored_after_exception (__main__.TestTrace.test_context_restored_after_exception) ... ok
+test_corrupt_dump_rejected (__main__.TestTrace.test_corrupt_dump_rejected) ... ok
+test_dump_budget_is_bounded (__main__.TestTrace.test_dump_budget_is_bounded) ... ok
+test_first_difference_and_same_input (__main__.TestTrace.test_first_difference_and_same_input) ... ok
+test_input_drift_is_not_hidden (__main__.TestTrace.test_input_drift_is_not_hidden) ... ok
+test_missing_stage_does_not_pass (__main__.TestTrace.test_missing_stage_does_not_pass) ... ok
+test_native_first_layer_and_missing_boundary (__main__.TestTrace.test_native_first_layer_and_missing_boundary) ... ok
+test_pipeline_execution_order_mismatch_does_not_pass (__main__.TestTrace.test_pipeline_execution_order_mismatch_does_not_pass) ... ok
+test_private_output_rejects_afs_and_escape (__main__.TestTrace.test_private_output_rejects_afs_and_escape) ... ok
+test_runner_rejects_old_native_cache_and_restores_environment (__main__.TestTrace.test_runner_rejects_old_native_cache_and_restores_environment) ... ok
+test_truncated_trace_rejected (__main__.TestTrace.test_truncated_trace_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.946s
+
+OK

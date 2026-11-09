@@ -1,0 +1,302 @@
+{
+  "schema": 1,
+  "arch": "gfx936",
+  "abi": 1,
+  "head_dim": 128,
+  "dtype": "bfloat16",
+  "baseline": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe",
+  "unknown_shape": "baseline",
+  "model_acceptance": false,
+  "source_archive_sha256": "ca721c2ae01e62202c06060c99b2f13a9c9d1fd59581b27ff485f1e7855bee66",
+  "sweep_sha256": "a1b804c39fd78470399456638d4c38b1dd43f57e29a852a60460cb747497887f",
+  "evidence_platform": {
+    "torch": "2.9.0",
+    "hip": "6.3.26093",
+    "triton": "3.6.0",
+    "compiler": "g++",
+    "device": 0,
+    "compiler_version": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "device_name": "BW",
+    "total_memory": 68702699520
+  },
+  "worker_source_sha256": {
+    "phase7_build_flash.py": "7a15c85400ad0180488affacda5ed4c649fcb9b80a541958a87af8e9ae34bf1f",
+    "phase7_flash_kernel.py": "a54a4958e4abfe44ec5666b6caeaed73fdcc3a2af325167d43f7123451779d24",
+    "phase7_flash_plugin.cpp.in": "c262b135180a90b24a1f6049d6bf2702722c69a4ffa550245414822efc7386d0",
+    "phase8_attention_worker.py": "44ec52d3fb457cb870f563ee2b7ee56f3d98052ca5364961748083321b8443fb",
+    "phase8_attention_tune.py": "f9495df5aca8b3ce5f00f5347a5e09cc062fefa3b9810b168d2ca860a77dc5db",
+    "h3_flash_abi.h": "212bdebc17b24ef96ee8e3ae2de6c81203a59ed26b07dc1997d20707ffdc1635"
+  },
+  "minimum_gain": 0.03,
+  "tie_fraction": 0.02,
+  "libraries": {
+    "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe": {
+      "sha256": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe",
+      "build_id": "f166da5ed441f920d5282adc14ee875e2c9c2956707a8beb60478b9c48f6a607",
+      "file": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe.so"
+    },
+    "52b5c1d63ae7d7e32de3e879ed9abec44df90cc07b67bae3b8d323a446675c5c": {
+      "sha256": "52b5c1d63ae7d7e32de3e879ed9abec44df90cc07b67bae3b8d323a446675c5c",
+      "build_id": "bfc72ea6a6abf0938ee8c4afa21baa198aaf3a2068acbf138d0b6d876b11d6b0",
+      "file": "52b5c1d63ae7d7e32de3e879ed9abec44df90cc07b67bae3b8d323a446675c5c.so"
+    },
+    "5483cbbcd8adb422642f352caa60b2d3959e2576b38e11e6c557f24dea2dc3dc": {
+      "sha256": "5483cbbcd8adb422642f352caa60b2d3959e2576b38e11e6c557f24dea2dc3dc",
+      "build_id": "54e8effbb4d0e79e54ae22251babc88571ce0fbd3aad33fa15a32d79fbfe88b9",
+      "file": "5483cbbcd8adb422642f352caa60b2d3959e2576b38e11e6c557f24dea2dc3dc.so"
+    },
+    "6e4f88d744b6718199cc1baad9f6f91d6baedf967be39b774c7bfd7a900e4051": {
+      "sha256": "6e4f88d744b6718199cc1baad9f6f91d6baedf967be39b774c7bfd7a900e4051",
+      "build_id": "ebe5215e55f6834138a9e9c1186900bc1ef55a8a884fb00598bc4a7d94bfce20",
+      "file": "6e4f88d744b6718199cc1baad9f6f91d6baedf967be39b774c7bfd7a900e4051.so"
+    }
+  },
+  "rules": [
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 65,
+        "key_tokens": 33,
+        "heads": 7,
+        "strides": [
+          [
+            58240,
+            896,
+            128,
+            1
+          ],
+          [
+            29568,
+            896,
+            128,
+            1
+          ],
+          [
+            29568,
+            896,
+            128,
+            1
+          ],
+          [
+            58240,
+            896,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "52b5c1d63ae7d7e32de3e879ed9abec44df90cc07b67bae3b8d323a446675c5c",
+      "candidate_id": "m32-n64-w4-s1",
+      "worker_sha256": "4a38d4d4603c859abeb35ffe3958669b0fb7f1da32cc54e1aedbb5bac923dd0c",
+      "measured_speedup": 1.1214953820108953,
+      "candidate_selected": true,
+      "versus_v4_relative_l2": 0.0,
+      "graph_relative_l2": 0.0
+    },
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 65,
+        "key_tokens": 33,
+        "heads": 7,
+        "strides": [
+          [
+            174720,
+            2688,
+            128,
+            1
+          ],
+          [
+            88704,
+            2688,
+            128,
+            1
+          ],
+          [
+            88704,
+            2688,
+            128,
+            1
+          ],
+          [
+            116480,
+            1792,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "6e4f88d744b6718199cc1baad9f6f91d6baedf967be39b774c7bfd7a900e4051",
+      "candidate_id": "m64-n64-w4-s2",
+      "worker_sha256": "4fa846216d3678f0dd167d65a2b15380d2a7863b4451e6c6f42bc5303c21f222",
+      "measured_speedup": 1.1402715037003215,
+      "candidate_selected": true,
+      "versus_v4_relative_l2": 0.0,
+      "graph_relative_l2": 0.0
+    },
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 2048,
+        "key_tokens": 2048,
+        "heads": 7,
+        "strides": [
+          [
+            1835008,
+            896,
+            128,
+            1
+          ],
+          [
+            1835008,
+            896,
+            128,
+            1
+          ],
+          [
+            1835008,
+            896,
+            128,
+            1
+          ],
+          [
+            1835008,
+            896,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe",
+      "candidate_id": "m64-n64-w4-s1",
+      "worker_sha256": "f0a72ab0497604d0488b1aa038f0f2125924417ae063b5125029800940be99fc",
+      "measured_speedup": 1.000315814232985,
+      "candidate_selected": false,
+      "versus_v4_relative_l2": 0.0,
+      "graph_relative_l2": 0.0
+    },
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 2048,
+        "key_tokens": 2048,
+        "heads": 7,
+        "strides": [
+          [
+            5505024,
+            2688,
+            128,
+            1
+          ],
+          [
+            5505024,
+            2688,
+            128,
+            1
+          ],
+          [
+            5505024,
+            2688,
+            128,
+            1
+          ],
+          [
+            3670016,
+            1792,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "05d78dddba8d4c8a0a8e90e99cceee19654cf44056e7639aedb76c5a3310eefe",
+      "candidate_id": "m64-n64-w4-s1",
+      "worker_sha256": "f0a72ab0497604d0488b1aa038f0f2125924417ae063b5125029800940be99fc",
+      "measured_speedup": 1.0009478598236201,
+      "candidate_selected": false,
+      "versus_v4_relative_l2": 0.0,
+      "graph_relative_l2": 0.0
+    },
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 27570,
+        "key_tokens": 27570,
+        "heads": 7,
+        "strides": [
+          [
+            24702720,
+            896,
+            128,
+            1
+          ],
+          [
+            24702720,
+            896,
+            128,
+            1
+          ],
+          [
+            24702720,
+            896,
+            128,
+            1
+          ],
+          [
+            24702720,
+            896,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "5483cbbcd8adb422642f352caa60b2d3959e2576b38e11e6c557f24dea2dc3dc",
+      "candidate_id": "m128-n32-w4-s1",
+      "worker_sha256": "e082827a7747ea7912e18876eb340b5d223ee57c7c2057ee22f92465b7965fa1",
+      "measured_speedup": 1.2432691039762829,
+      "candidate_selected": true,
+      "versus_v4_relative_l2": 0.0006535365828312933,
+      "graph_relative_l2": 0.0006528935045935214
+    },
+    {
+      "spec": {
+        "batch": 1,
+        "query_tokens": 27570,
+        "key_tokens": 27570,
+        "heads": 7,
+        "strides": [
+          [
+            74108160,
+            2688,
+            128,
+            1
+          ],
+          [
+            74108160,
+            2688,
+            128,
+            1
+          ],
+          [
+            74108160,
+            2688,
+            128,
+            1
+          ],
+          [
+            49405440,
+            1792,
+            128,
+            1
+          ]
+        ]
+      },
+      "library": "5483cbbcd8adb422642f352caa60b2d3959e2576b38e11e6c557f24dea2dc3dc",
+      "candidate_id": "m128-n32-w4-s1",
+      "worker_sha256": "e082827a7747ea7912e18876eb340b5d223ee57c7c2057ee22f92465b7965fa1",
+      "measured_speedup": 1.2437374749498997,
+      "candidate_selected": true,
+      "versus_v4_relative_l2": 0.000652357644867152,
+      "graph_relative_l2": 0.000650887202937156
+    }
+  ]
+}

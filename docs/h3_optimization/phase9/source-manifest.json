@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-11-09T08:36:23.874829+08:00",
+  "base_commit": "5ec6c504dc78c89cff2f776d6d2505e373e17dd9",
+  "server_contacted": false,
+  "afs_accessed": false,
+  "gpu_tested": false,
+  "files": {
+    "scripts/experiments/phase9_attention.py": "e94376973653a76017f91ce305caf75dca6a1904218921b95433f0fcc21874ce",
+    "scripts/experiments/phase9_dispatch.cpp.in": "b5450dd81a1046a1a313526bdf8ea4896cb8c4fe30aa0c725a98c34791d2aa69",
+    "scripts/experiments/phase9_freeze.py": "0feb558e91044fcf1194a55daa6bb23748c8c15804dc964af8d13999c11d2244",
+    "scripts/experiments/phase9_options.sh": "3618c4235833cefbab4ce58e70aed0c62da4e79537338394c0b05bbf7e54ea84",
+    "scripts/experiments/phase9_pipeline.py": "300a17a7788a264a106df0c4608f2a5eb8b1ab6ed3ed97eb5bc1d2ba67b58aac",
+    "scripts/experiments/phase9_profile.py": "5bb0d81fdc5103edd6930bf2f8123b83eceb316277f7d7e8c161e76e9f9eff73",
+    "scripts/experiments/test_phase9_cpu.py": "72b642f4f059b7368899eac3cb4e8381bd7daaec29247740a9b2f89d907a0202"
+  }
+}
