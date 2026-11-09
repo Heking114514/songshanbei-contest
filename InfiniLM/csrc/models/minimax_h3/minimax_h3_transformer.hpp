@@ -113,6 +113,11 @@ public:
 
     infinicore::Tensor forward(const infinicore::Tensor &temb) const;
 
+    // Recomputed for each forward; batches communication, not weight matrices.
+    static std::vector<infinicore::Tensor> forward_batch(
+        const std::vector<std::shared_ptr<MiniMaxH3AdaLNProjection>> &projections,
+        const infinicore::Tensor &temb);
+
 private:
     infinicore::DataType dtype_;
     size_t tp_size_;
@@ -137,7 +142,12 @@ public:
                                const infinicore::Tensor &adaln_indices,
                                const std::shared_ptr<infinicore::nn::RoPE> &rope,
                                const infinicore::Tensor &position_ids,
-                               const std::optional<infinicore::Tensor> &rotary_cos_sin_cache = std::nullopt) const;
+                               const std::optional<infinicore::Tensor> &rotary_cos_sin_cache = std::nullopt,
+                               const std::optional<infinicore::Tensor> &prepared_modulation = std::nullopt) const;
+
+    const std::shared_ptr<MiniMaxH3AdaLNProjection> &adaln_projection() const {
+        return adaln_proj_;
+    }
 
 private:
     size_t hidden_size_;

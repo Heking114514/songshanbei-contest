@@ -35,6 +35,8 @@ from infinilm.multimodal.minimax_h3 import (
     MiniMaxH3DiffusersAdapter,
     MiniMaxH3TransformerRunner,
 )
+from infinilm.multimodal.video_postprocess import install_video_postprocess
+from infinilm.multimodal.minimax_h3_vae_parallel import install_parallel_vae_decode
 from safetensors.torch import load_file
 from transformers import Qwen3VLForConditionalGeneration
 
@@ -541,6 +543,11 @@ def load_pipeline(
         installed_kernels = install_ninetoothed_audio_kernels(pipe.audio_vae)
         print(f"[model] Materialized audio weight norms: {materialized_norms}")
         print(f"[model] NineToothed audio SnakeBeta kernels: {installed_kernels}")
+        if not legacy:
+            installed_postprocess = install_video_postprocess(
+                getattr(pipe, "video_processor", None)
+            )
+            print(f"[model] Experimental video postprocess: {installed_postprocess}")
     return pipe, text_encoder, transformer
 
 
@@ -803,6 +810,7 @@ def main() -> None:
     )
 
     print_generation_summary(args, prepared)
+    parallel_vae = None if args.legacy else install_parallel_vae_decode(pipe.vae, devices)
     profiler = install_component_profilers(
         timings,
         text_encoder=text_encoder,
@@ -821,7 +829,11 @@ def main() -> None:
             result = pipe(**generation_kwargs)
             validate_generation_output(result, prepared["num_frames"])
     finally:
-        profiler.close()
+        try:
+            profiler.close()
+        finally:
+            if parallel_vae is not None:
+                parallel_vae.close()
 
     with timings.measure("output.media_encode"):
         output_path = Path(args.output).expanduser().resolve()

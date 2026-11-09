@@ -1,4 +1,5 @@
 #include "minimax_h3_transformer.hpp"
+#include "h3_audio_trace.hpp"
 
 #include "../../global_state/global_state.hpp"
 #include "../models_registry.hpp"
@@ -8,6 +9,9 @@
 #include <infinicore/ops/cast.hpp>
 #include <infinicore/ops/distributed/allgather.hpp>
 #include <infinicore/ops/embedding.hpp>
+#include <infinicore/ops/h3_modulation.hpp>
+#include <infinicore/ops/h3_rms_modulation.hpp>
+#include <infinicore/ops/h3_qk_norm_rope.hpp>
 #include <infinicore/ops/index_copy.hpp>
 #include <infinicore/ops/mha.hpp>
 #include <infinicore/ops/mrope.hpp>
@@ -19,6 +23,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -56,6 +62,16 @@ infinicore::Tensor apply_adaln(const infinicore::Tensor &normalized,
                                const infinicore::Tensor &scale,
                                const infinicore::Tensor &shift) {
     auto modulated = infinicore::op::addcmul(normalized, normalized, scale, 1.0f);
+    // modulated is a private temporary. Reusing it removes one full hidden
+    // allocation while retaining addcmul's BF16 store before the separate add.
+    static const bool reuse_temporary = [] {
+        const char *value = std::getenv("H3_EXPERIMENT_ADALN_INPLACE");
+        return value != nullptr && std::strcmp(value, "1") == 0;
+    }();
+    if (reuse_temporary) {
+        infinicore::op::add_(modulated, modulated, shift);
+        return modulated;
+    }
     return infinicore::op::add(modulated, shift);
 }
 
@@ -63,6 +79,81 @@ infinicore::Tensor gated_residual(const infinicore::Tensor &residual,
                                   const infinicore::Tensor &gate,
                                   const infinicore::Tensor &branch) {
     return infinicore::op::addcmul(residual, gate, branch, 1.0f);
+}
+
+bool experiment_enabled(const char *name) {
+    const char *value = std::getenv(name);
+    if (value == nullptr || std::strcmp(value, "0") == 0) {
+        return false;
+    }
+    if (std::strcmp(value, "1") != 0) {
+        throw std::invalid_argument(std::string(name) + " must be 0 or 1");
+    }
+    return true;
+}
+
+int fused_rms_block_size() {
+    static const int block = [] {
+        const char *value = std::getenv("H3_EXPERIMENT_FUSED_RMS_BLOCK");
+        if (value == nullptr || std::strcmp(value, "0") == 0) {
+            return 0;
+        }
+        for (const int size : {128, 256, 512, 1024}) {
+            if (std::to_string(size) == value) {
+                return size;
+            }
+        }
+        throw std::invalid_argument(
+            "H3_EXPERIMENT_FUSED_RMS_BLOCK must be 0,128,256,512,1024");
+    }();
+    return block;
+}
+
+bool fused_rms_eligible(const infinicore::Tensor &x,
+                        const infinicore::Tensor &weight) {
+    return x->ndim() == 3 && x->size(0) == 1
+        && x->size(2) > 0 && x->size(2) <= 8192 && x->size(1) <= 2147483647
+        && x->dtype() == infinicore::DataType::BF16 && x->is_contiguous()
+        && weight->ndim() == 1 && weight->size(0) == x->size(2)
+        && weight->is_contiguous() && weight->device() == x->device()
+        && (weight->dtype() == infinicore::DataType::BF16
+            || weight->dtype() == infinicore::DataType::F32);
+}
+
+bool indexed_modulation_requested() {
+    static const bool enabled = [] {
+        const char *value = std::getenv("H3_EXPERIMENT_ADALN_INDEXED");
+        if (value == nullptr || std::strcmp(value, "0") == 0) {
+            return false;
+        }
+        if (std::strcmp(value, "1") != 0) {
+            throw std::invalid_argument("H3_EXPERIMENT_ADALN_INDEXED must be 0 or 1");
+        }
+        return true;
+    }();
+    return enabled;
+}
+
+infinicore::Tensor indexed_modulate(
+    const infinicore::Tensor &x, const infinicore::Tensor &branch,
+    const infinicore::Tensor &table, const infinicore::Tensor &indices, int mode,
+    size_t hidden_size) {
+    if (x->dtype() == infinicore::DataType::BF16
+        && branch->dtype() == infinicore::DataType::BF16
+        && x->is_contiguous() && branch->is_contiguous()) {
+        return infinicore::op::h3_modulation(x, branch, table, indices, mode);
+    }
+    // An unexpected norm/attention/FF output layout keeps existing semantics.
+    // The normal contiguous BF16 path never builds this expanded table.
+    auto expanded = gather_rows(table, indices)->unsqueeze(0);
+    const size_t offset = mode < 2 ? 0 : 3;
+    if (mode == 0 || mode == 2) {
+        return apply_adaln(
+            x, expanded->narrow({{2, (offset + 1) * hidden_size, hidden_size}}),
+            expanded->narrow({{2, offset * hidden_size, hidden_size}}));
+    }
+    return gated_residual(
+        x, expanded->narrow({{2, (offset + 2) * hidden_size, hidden_size}}), branch);
 }
 
 void require_tensor(const std::optional<infinicore::Tensor> &tensor,
@@ -134,12 +225,55 @@ infinicore::Tensor MiniMaxH3Attention::forward(
     key = key->view({batch_size * sequence_length, num_heads_, head_dim_});
     value = value->view({batch_size, sequence_length, num_heads_, head_dim_});
 
-    query = norm_q_->forward(query);
-    key = norm_k_->forward(key);
+    static const bool fuse_qk = experiment_enabled("H3_EXPERIMENT_QK_NORM_ROPE");
+    const auto qk_device = query->device().getType();
+    const auto q_weight = norm_q_->weight();
+    const auto k_weight = norm_k_->weight();
+    const bool qk_fused = fuse_qk && batch_size == 1 && sequence_length <= 2147483647
+        && head_dim_ == 128 && num_heads_ > 0 && num_heads_ <= 64
+        && (qk_device == infinicore::Device::Type::NVIDIA
+            || qk_device == infinicore::Device::Type::HYGON)
+        && rotary_cos_sin_cache.has_value() && position_ids.has_value()
+        && query->dtype() == infinicore::DataType::BF16
+        && key->dtype() == infinicore::DataType::BF16
+        && query->strides()[2] == 1 && key->strides()[2] == 1
+        && query->strides()[1] >= 128 && key->strides()[1] >= 128
+        && query->strides()[0] >= static_cast<infinicore::Stride>(num_heads_) * query->strides()[1]
+        && key->strides()[0] >= static_cast<infinicore::Stride>(num_heads_) * key->strides()[1]
+        && q_weight->ndim() == 1 && q_weight->size(0) == 128
+        && k_weight->shape() == q_weight->shape()
+        && q_weight->dtype() == k_weight->dtype()
+        && (q_weight->dtype() == infinicore::DataType::BF16
+            || q_weight->dtype() == infinicore::DataType::F32)
+        && q_weight->is_contiguous() && k_weight->is_contiguous()
+        && rotary_cos_sin_cache.value()->ndim() == 2
+        && rotary_cos_sin_cache.value()->size(0) > 0
+        && rotary_cos_sin_cache.value()->size(1) > 0
+        && rotary_cos_sin_cache.value()->size(1) <= 128
+        && rotary_cos_sin_cache.value()->size(1) % 6 == 0
+        && rotary_cos_sin_cache.value()->dtype() == infinicore::DataType::BF16
+        && rotary_cos_sin_cache.value()->is_contiguous()
+        && position_ids.value()->ndim() == 1
+        && position_ids.value()->size(0) == sequence_length
+        && position_ids.value()->dtype() == infinicore::DataType::I64
+        && position_ids.value()->is_contiguous()
+        && query->device() == key->device()
+        && query->device() == q_weight->device() && query->device() == k_weight->device()
+        && query->device() == rotary_cos_sin_cache.value()->device()
+        && query->device() == position_ids.value()->device();
+    if (qk_fused) {
+        std::tie(query, key) = infinicore::op::h3_qk_norm_rope(
+            query, key, q_weight, k_weight, rotary_cos_sin_cache.value(),
+            position_ids.value(), static_cast<float>(norm_q_->eps()),
+            static_cast<float>(norm_k_->eps()));
+    } else {
+        query = norm_q_->forward(query);
+        key = norm_k_->forward(key);
+    }
     query = query->view({batch_size, sequence_length, num_heads_, head_dim_});
     key = key->view({batch_size, sequence_length, num_heads_, head_dim_});
 
-    if (rotary_cos_sin_cache.has_value()) {
+    if (!qk_fused && rotary_cos_sin_cache.has_value()) {
         if (!position_ids.has_value()) {
             throw std::runtime_error(
                 "MiniMaxH3Attention: position_ids are required with a rotary cache");
@@ -160,13 +294,35 @@ infinicore::Tensor MiniMaxH3Attention::forward(
         auto sin = cache->narrow({{1, half_rotary_dim, half_rotary_dim}});
         auto query_flat = query->squeeze(0)->view({sequence_length, num_heads_ * head_dim_});
         auto key_flat = key->squeeze(0)->view({sequence_length, num_heads_ * head_dim_});
-        std::tie(query_flat, key_flat) = infinicore::op::mrope(
-            query_flat, key_flat, cos, sin, position_ids.value(),
-            static_cast<int>(head_dim_), static_cast<int>(rotary_dim), section,
-            section, section, false);
+        // These are private norm_q/norm_k outputs, not QKV weight views.
+        // The CUDA-compatible implementation loads each rotation pair before
+        // storing it, and different threads own disjoint pairs and tail lanes.
+        static const bool inplace_rope = [] {
+            const char *value = std::getenv("H3_EXPERIMENT_ROPE_INPLACE");
+            return value != nullptr && std::strcmp(value, "1") == 0;
+        }();
+        const auto device_type = query_flat->device().getType();
+        const bool compatible_inplace = inplace_rope
+            && (device_type == infinicore::Device::Type::NVIDIA
+                || device_type == infinicore::Device::Type::HYGON)
+            && query_flat->dtype() == infinicore::DataType::BF16
+            && key_flat->dtype() == infinicore::DataType::BF16
+            && query_flat->is_contiguous() && key_flat->is_contiguous()
+            && query_flat->data() != key_flat->data();
+        if (compatible_inplace) {
+            infinicore::op::mrope_(
+                query_flat, key_flat, query_flat, key_flat, cos, sin,
+                position_ids.value(), static_cast<int>(head_dim_),
+                static_cast<int>(rotary_dim), section, section, section, false);
+        } else {
+            std::tie(query_flat, key_flat) = infinicore::op::mrope(
+                query_flat, key_flat, cos, sin, position_ids.value(),
+                static_cast<int>(head_dim_), static_cast<int>(rotary_dim), section,
+                section, section, false);
+        }
         query = query_flat->view({batch_size, sequence_length, num_heads_, head_dim_});
         key = key_flat->view({batch_size, sequence_length, num_heads_, head_dim_});
-    } else if (rope != nullptr) {
+    } else if (!qk_fused && rope != nullptr) {
         if (!position_ids.has_value()) {
             throw std::runtime_error(
                 "MiniMaxH3Attention: position_ids are required with RoPE");
@@ -310,6 +466,75 @@ MiniMaxH3AdaLNProjection::forward(const infinicore::Tensor &temb) const {
     return gathered->permute({1, 0})->contiguous();
 }
 
+std::vector<infinicore::Tensor> MiniMaxH3AdaLNProjection::forward_batch(
+    const std::vector<std::shared_ptr<MiniMaxH3AdaLNProjection>> &projections,
+    const infinicore::Tensor &temb) {
+    if (projections.empty()) {
+        return {};
+    }
+    if (!temb || temb->ndim() != 2 || temb->size(0) == 0 || !projections.front()) {
+        throw std::runtime_error("MiniMaxH3AdaLNProjection: invalid batch input");
+    }
+    const auto &first = *projections.front();
+    if (first.tp_size_ == 0
+        || (first.tp_size_ > 1 && first.communicator_ == nullptr)) {
+        throw std::runtime_error("MiniMaxH3AdaLNProjection: invalid TP group");
+    }
+    for (const auto &projection : projections) {
+        if (!projection || projection->dtype_ != first.dtype_
+            || projection->tp_size_ != first.tp_size_
+            || projection->communicator_ != first.communicator_) {
+            throw std::runtime_error(
+                "MiniMaxH3AdaLNProjection: batch must share dtype/TP group");
+        }
+    }
+
+    // Preserve one GEMM per layer and its original matrix dimensions. Sharing
+    // this pure activation only removes repeated SiLU/casts of the same temb.
+    auto activated = cast_to(infinicore::op::silu(temb), first.dtype_);
+    std::vector<infinicore::Tensor> locals;
+    locals.reserve(projections.size());
+    size_t local_width = 0;
+    for (const auto &projection : projections) {
+        auto local = linear_forward(projection->linear_, activated);
+        if (local->ndim() != 2 || local->size(0) != temb->size(0)
+            || local->size(1) == 0
+            || (!locals.empty() && local->size(1) != local_width)
+            || local->device() != temb->device() || local->dtype() != first.dtype_) {
+            throw std::runtime_error(
+                "MiniMaxH3AdaLNProjection: incompatible local projection shape");
+        }
+        local_width = local->size(1);
+        locals.push_back(local->unsqueeze(0));
+    }
+
+    const size_t layers = projections.size();
+    const size_t rows = temb->size(0);
+    auto packed = infinicore::Tensor::empty(
+        {layers, rows, local_width}, first.dtype_, temb->device());
+    for (size_t i = 0; i < layers; ++i) {
+        // Same-device copy_from is a recorded Rearrange op. Generic dim-0
+        // cat issues raw memcpy calls and also requires at least two inputs;
+        // neither contract is suitable for software-graph / one-layer smoke.
+        packed->narrow({{0, i, 1}})->copy_from(locals[i]);
+    }
+    if (first.tp_size_ > 1) {
+        auto gathered = infinicore::op::distributed::allgather(
+            packed, first.tp_size_, first.communicator_);
+        // RCCL output order is [rank, layer, row, local_column].
+        // Restore each original layer's [row, rank * local_column] order.
+        packed = gathered->view({first.tp_size_, layers, rows, local_width})
+                     ->permute({1, 2, 0, 3})->contiguous()
+                     ->view({layers, rows, first.tp_size_ * local_width});
+    }
+    std::vector<infinicore::Tensor> outputs;
+    outputs.reserve(layers);
+    for (size_t i = 0; i < layers; ++i) {
+        outputs.push_back(packed->narrow({{0, i, 1}})->squeeze(0));
+    }
+    return outputs;
+}
+
 MiniMaxH3TransformerBlock::MiniMaxH3TransformerBlock(
     size_t hidden_size, size_t num_heads, size_t head_dim,
     size_t ffn_hidden_size, size_t time_embed_dim, double norm_eps,
@@ -330,9 +555,70 @@ infinicore::Tensor MiniMaxH3TransformerBlock::forward(
     const infinicore::Tensor &adaln_indices,
     const std::shared_ptr<infinicore::nn::RoPE> &rope,
     const infinicore::Tensor &position_ids,
-    const std::optional<infinicore::Tensor> &rotary_cos_sin_cache) const {
-    auto modulation = adaln_proj_->forward(temb)->view(
+    const std::optional<infinicore::Tensor> &rotary_cos_sin_cache,
+    const std::optional<infinicore::Tensor> &prepared_modulation) const {
+    auto projected = prepared_modulation.has_value()
+        ? prepared_modulation.value() : adaln_proj_->forward(temb);
+    if (projected->ndim() != 2 || projected->size(0) != temb->size(0)
+        || projected->size(1) != H3_MODALITY_COUNT * 6 * hidden_size_) {
+        throw std::runtime_error("MiniMaxH3TransformerBlock: invalid modulation");
+    }
+    auto modulation = projected->view(
         {temb->size(0) * H3_MODALITY_COUNT, 6 * hidden_size_});
+    const auto device_type = hidden_states->device().getType();
+    static const bool fuse_rms = experiment_enabled("H3_EXPERIMENT_RMS_ADALN");
+    static const bool fuse_gated_rms = experiment_enabled("H3_EXPERIMENT_GATE_RMS_ADALN");
+    const bool indexed = (indexed_modulation_requested() || fuse_rms || fuse_gated_rms)
+        && (device_type == infinicore::Device::Type::NVIDIA
+            || device_type == infinicore::Device::Type::HYGON)
+        && hidden_states->dtype() == infinicore::DataType::BF16
+        && modulation->dtype() == infinicore::DataType::BF16
+        && adaln_indices->dtype() == infinicore::DataType::I64
+        && hidden_states->ndim() == 3 && hidden_states->size(0) == 1
+        && hidden_states->size(2) == hidden_size_
+        && adaln_indices->ndim() == 1
+        && adaln_indices->size(0) == hidden_states->size(1)
+        && hidden_states->is_contiguous() && modulation->is_contiguous()
+        && adaln_indices->is_contiguous()
+        && hidden_states->device() == modulation->device()
+        && hidden_states->device() == adaln_indices->device();
+    if (indexed) {
+        infinicore::Tensor normalized;
+        if (fuse_rms && fused_rms_eligible(hidden_states, norm1_->weight())) {
+            normalized = infinicore::op::h3_rms_modulation(
+                hidden_states, hidden_states, norm1_->weight(), modulation,
+                adaln_indices, 0, static_cast<float>(norm1_->eps()), fused_rms_block_size()).first;
+        } else {
+            normalized = norm1_->forward(hidden_states);
+            normalized = indexed_modulate(
+                normalized, normalized, modulation, adaln_indices, 0, hidden_size_);
+        }
+        auto attention_output = attn_->forward(
+            normalized, rope, position_ids, rotary_cos_sin_cache);
+        infinicore::Tensor output;
+        if (fuse_gated_rms && fused_rms_eligible(hidden_states, norm2_->weight())
+            && attention_output->dtype() == infinicore::DataType::BF16
+            && attention_output->is_contiguous()) {
+            std::tie(normalized, output) = infinicore::op::h3_rms_modulation(
+                hidden_states, attention_output, norm2_->weight(), modulation,
+                adaln_indices, 2, static_cast<float>(norm2_->eps()), fused_rms_block_size());
+        } else {
+            output = indexed_modulate(
+                hidden_states, attention_output, modulation, adaln_indices, 1, hidden_size_);
+            if (fuse_rms && fused_rms_eligible(output, norm2_->weight())) {
+                normalized = infinicore::op::h3_rms_modulation(
+                    output, output, norm2_->weight(), modulation, adaln_indices,
+                    1, static_cast<float>(norm2_->eps()), fused_rms_block_size()).first;
+            } else {
+                normalized = norm2_->forward(output);
+                normalized = indexed_modulate(
+                    normalized, normalized, modulation, adaln_indices, 2, hidden_size_);
+            }
+        }
+        auto mlp_output = ff_->forward(normalized);
+        return indexed_modulate(
+            output, mlp_output, modulation, adaln_indices, 3, hidden_size_);
+    }
     auto token_modulation = gather_rows(modulation, adaln_indices)->unsqueeze(0);
     auto shift_msa = token_modulation->narrow({{2, 0, hidden_size_}});
     auto scale_msa = token_modulation->narrow({{2, hidden_size_, hidden_size_}});
@@ -525,10 +811,14 @@ InfinilmModel::Output MiniMaxH3Transformer::forward(const Input &input) const {
                                  "currently supports batch size 1");
     }
 
+    AudioRowTrace audio_trace;
+    audio_trace.write("audio_input", audio_hidden_states);
     auto video_input = cast_to(video_hidden_states, infinicore::DataType::F32);
     auto audio_input = cast_to(audio_hidden_states, infinicore::DataType::F32);
     auto video_embeds = cast_to(linear_forward(proj_in_, video_input), dtype_);
     auto audio_embeds = cast_to(linear_forward(audio_proj_in_, audio_input), dtype_);
+
+    audio_trace.write("audio_embeds", audio_embeds);
 
     // Pointer identity is unsafe after in-place writes or rank-local allocation reuse.
     // Only callers supplying a conditioning revision opt into text reuse.
@@ -550,6 +840,8 @@ InfinilmModel::Output MiniMaxH3Transformer::forward(const Input &input) const {
     hidden_states = infinicore::op::index_copy(
         hidden_states, 1, input.audio_indices.value(), audio_embeds);
 
+    audio_trace.rows("packed_audio", hidden_states, input.audio_indices.value());
+
     auto temb = time_embedder_->forward(input.timestep.value());
     auto timestep_indices = input.timestep_indices.value();
     auto token_tags = input.token_tags.value();
@@ -558,18 +850,41 @@ InfinilmModel::Output MiniMaxH3Transformer::forward(const Input &input) const {
     auto adaln_indices = infinicore::op::add(timestep_indices_x3, token_tags);
     auto rope_positions = has_rotary_cache ? position_ids : position_ids->permute({1, 0});
 
+    // All ranks must choose the same policy before constructing/running the
+    // model. No conditioning-dependent result is cached across denoising steps.
+    static const bool batch_adaln = [] {
+        const char *value = std::getenv("H3_EXPERIMENT_ADALN_BATCH");
+        return value != nullptr && std::strcmp(value, "1") == 0;
+    }();
+    std::vector<infinicore::Tensor> modulations;
+    if (batch_adaln && !transformer_blocks_.empty()) {
+        std::vector<std::shared_ptr<MiniMaxH3AdaLNProjection>> projections;
+        projections.reserve(transformer_blocks_.size());
+        for (const auto &block : transformer_blocks_) {
+            projections.push_back(block->adaln_projection());
+        }
+        modulations = MiniMaxH3AdaLNProjection::forward_batch(projections, temb);
+    }
     for (size_t i = 0; i < transformer_blocks_.size(); ++i) {
+        std::optional<infinicore::Tensor> prepared;
+        if (batch_adaln) {
+            prepared = modulations[i];
+        }
         hidden_states = transformer_blocks_[i]->forward(
             hidden_states, temb, adaln_indices, rope_, rope_positions,
-            input.rotary_cos_sin_cache);
+            input.rotary_cos_sin_cache, prepared);
+        audio_trace.rows("block_" + std::to_string(i) + "_audio", hidden_states,
+                         input.audio_indices.value());
     }
 
     auto normalized = norm_out_->forward(hidden_states, temb, timestep_indices);
+    audio_trace.rows("norm_out_audio", normalized, input.audio_indices.value());
     auto normalized_f32 = cast_to(normalized, infinicore::DataType::F32);
     auto video_all = linear_forward(proj_out_, normalized_f32)->squeeze(0);
     auto audio_all = linear_forward(audio_proj_out_, normalized_f32)->squeeze(0);
     auto video_output = gather_rows(video_all, input.video_indices.value())->unsqueeze(0);
     auto audio_output = gather_rows(audio_all, input.audio_indices.value())->unsqueeze(0);
+    audio_trace.write("audio_output", audio_output);
     return {video_output, audio_output};
 }
 

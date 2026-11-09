@@ -1,0 +1,140 @@
+// Generated exact BSHD stride dispatcher. Each child owns its validation and HIP modules.
+#if defined(_WIN32) && (!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0600)
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+#include "h3_flash_abi.h"
+#include <atomic>
+#include <cstdio>
+#include <cstring>
+#include <new>
+#include <stdexcept>
+#include <string>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <mutex>
+#include <dlfcn.h>
+#endif
+namespace {
+struct Library { const char *file, *build; };
+const Library libraries[] = { @LIBRARIES@ };
+struct Rule { H3FlashSpec spec; size_t child; };
+const Rule rules[] = { @RULES@ };
+int module_anchor;
+std::string directory() {
+    char buffer[32768] = {};
+#ifdef _WIN32
+    HMODULE self = nullptr;
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCSTR>(&module_anchor), &self) ||
+        !GetModuleFileNameA(self, buffer, sizeof(buffer))) throw std::runtime_error("module path");
+    std::string path(buffer);
+#else
+    Dl_info info{};
+    if (!dladdr(&module_anchor, &info) || !info.dli_fname) throw std::runtime_error("module path");
+    std::string path(info.dli_fname);
+#endif
+    auto slash = path.find_last_of("/\\");
+    if (slash == std::string::npos) throw std::runtime_error("absolute module path required");
+    return path.substr(0,slash+1);
+}
+const H3FlashApi *load(size_t index) {
+    // Process lifetime, including on failure. Never unload HIP code used by a graph.
+#ifdef _WIN32
+    static SRWLOCK mutex = SRWLOCK_INIT;
+    struct Guard {
+        SRWLOCK *p;
+        explicit Guard(SRWLOCK *p):p(p){AcquireSRWLockExclusive(p);}
+        ~Guard(){ReleaseSRWLockExclusive(p);}
+    } lock(&mutex);
+#else
+    static std::mutex mutex;
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
+    static const H3FlashApi *loaded[sizeof(libraries)/sizeof(libraries[0])] = {};
+    if (loaded[index]) return loaded[index];
+    auto path = directory()+libraries[index].file;
+#ifdef _WIN32
+    auto handle = LoadLibraryA(path.c_str());
+    auto get = handle ? reinterpret_cast<H3FlashGetApi>(GetProcAddress(handle,"h3FlashGetApi")) : nullptr;
+#else
+    auto handle = dlopen(path.c_str(), RTLD_NOW|RTLD_LOCAL);
+    auto get = handle ? reinterpret_cast<H3FlashGetApi>(dlsym(handle,"h3FlashGetApi")) : nullptr;
+#endif
+    if (!get) throw std::runtime_error("child load failed: "+path);
+    auto api=get();
+    if (!api || api->abi_version!=H3_FLASH_ABI_VERSION || api->struct_bytes!=sizeof(H3FlashApi) ||
+        !api->arch || std::strcmp(api->arch,"gfx936") || !api->build_id ||
+        std::strcmp(api->build_id,libraries[index].build) || !api->prepare || !api->launch || !api->destroy)
+        throw std::runtime_error("child ABI/build mismatch");
+    loaded[index]=api;
+    return api;
+}
+bool equal(const H3FlashSpec &a, const H3FlashSpec &b) {
+    if (a.batch!=b.batch || a.query_tokens!=b.query_tokens || a.key_tokens!=b.key_tokens || a.heads!=b.heads)
+        return false;
+    for (int t=0;t<4;++t) for(int i=0;i<4;++i) if(a.strides[t][i]!=b.strides[t][i]) return false;
+    return true;
+}
+void log_plan(const H3FlashSpec &spec,size_t choice,bool matched) {
+    static std::atomic_flag mutex=ATOMIC_FLAG_INIT;
+    while(mutex.test_and_set(std::memory_order_acquire)) {}
+    static H3FlashSpec seen[64]{};
+    static size_t count=0;
+    bool first=true;
+    for(size_t i=0;i<count;++i) if(equal(seen[i],spec)){first=false;break;}
+    if(first && count<64) seen[count++]=spec;
+    else if(count>=64) first=false;
+    mutex.clear(std::memory_order_release);
+    if(!first)return;
+    // One line per distinct layout. Old q/kv-only logs cannot recover exact dispatch keys.
+    char text[2048];
+    int used=std::snprintf(text,sizeof(text),
+        "H3_FLASH_DISPATCH b=%lld q=%lld k=%lld heads=%lld route=%s child=%s strides=",
+        (long long)spec.batch,(long long)spec.query_tokens,(long long)spec.key_tokens,
+        (long long)spec.heads,matched?"measured":"baseline-unmeasured",libraries[choice].build);
+    for(int t=0;t<4;++t)for(int axis=0;axis<4;++axis)
+        used+=std::snprintf(text+used,sizeof(text)-used,"%s%lld",t||axis?",":"",
+                           (long long)spec.strides[t][axis]);
+    std::fprintf(stderr,"%s\n",text);
+}
+struct Plan { const H3FlashApi *api; void *child=nullptr; };
+int prepare(const H3FlashSpec *spec,void **output) {
+    if (!spec || !output) return 1;
+    *output=nullptr;
+    try {
+        size_t choice=@BASELINE@;
+        bool matched=false;
+        for(const auto &r:rules) if(equal(r.spec,*spec)) {choice=r.child;matched=true;break;}
+        auto api=load(choice);
+        auto p=new(std::nothrow) Plan{api,nullptr};
+        if(!p) return 2;
+        int rc=api->prepare(spec,&p->child);
+        if(rc || !p->child) {if(p->child)api->destroy(p->child);delete p;return rc?rc:3;}
+        *output=p;
+        log_plan(*spec,choice,matched);
+        return 0;
+    } catch(const std::exception &e) {std::fprintf(stderr,"H3_FLASH_DISPATCH_ERROR %s\n",e.what());return 4;}
+      catch(...) {return 5;}
+}
+int launch(void *plan,const H3FlashCall *call,void *stream) {
+    if(!plan || !call)return 1;
+    auto p=static_cast<Plan*>(plan);
+    return p->api->launch(p->child,call,stream);
+}
+void destroy(void *plan) {
+    if(!plan)return;
+    auto p=static_cast<Plan*>(plan);p->api->destroy(p->child);delete p;
+}
+const H3FlashApi api={H3_FLASH_ABI_VERSION,sizeof(H3FlashApi),"gfx936","@BUILD_ID@",prepare,launch,destroy};
+}
+#ifdef _WIN32
+#define H3_EXPORT __declspec(dllexport)
+#else
+#define H3_EXPORT __attribute__((visibility("default")))
+#endif
+extern "C" H3_EXPORT const H3FlashApi *h3FlashGetApi(){return &api;}
