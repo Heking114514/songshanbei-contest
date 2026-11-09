@@ -63,6 +63,9 @@ infiniStatus_t Descriptor::create(
 
     // 5. 将标量属性 value 存入 Descriptor 内部
     desc->_value = value;
+    desc->_h3_row_strided = dtype == INFINI_DTYPE_BF16
+        && op::elementwise::nvidia::h3ExperimentEnabled("H3_EXPERIMENT_ADDCMUL_ROWS")
+        && op::elementwise::nvidia::makeH3RowStridedMeta(out_desc, input_desc_vec, desc->_h3_rows);
 
     return INFINI_STATUS_SUCCESS;
 }
@@ -111,6 +114,27 @@ INFINIOP_CUDA_KERNEL addcmul_kernel(
     out[out_offset] = op::addcmul::cuda::AddcmulOp{}(in_val, t1_val, t2_val, value);
 }
 
+// One block covers four coalesced spans of one row. No per-element
+// multidimensional division/modulo; use exactly the original AddcmulOp.
+template <typename T>
+INFINIOP_CUDA_KERNEL h3_addcmul_rows_kernel(
+    op::elementwise::nvidia::H3RowStridedMeta<3> meta,
+    T *out, const T *input, const T *t1, const T *t2, float value) {
+    const size_t first_col = static_cast<size_t>(blockIdx.x) * blockDim.x * 4 + threadIdx.x;
+    for (size_t row = blockIdx.y; row < meta.rows; row += gridDim.y) {
+#pragma unroll
+        for (unsigned int item = 0; item < 4; ++item) {
+            const size_t col = first_col + item * blockDim.x;
+            if (col < meta.width) {
+                out[row * meta.output_stride + col] = op::addcmul::cuda::AddcmulOp{}(
+                    input[row * meta.input_strides[0] + col],
+                    t1[row * meta.input_strides[1] + col],
+                    t2[row * meta.input_strides[2] + col], value);
+            }
+        }
+    }
+}
+
 template <typename T>
 static inline infiniStatus_t launch_addcmul_kernel(
     const Descriptor *desc,
@@ -131,6 +155,15 @@ static inline infiniStatus_t launch_addcmul_kernel(
     cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
     constexpr uint32_t BLOCK_SIZE = 256;
+    if (desc->_h3_row_strided) {
+        const auto &meta = desc->_h3_rows;
+        const dim3 grid(static_cast<unsigned int>((meta.width + BLOCK_SIZE * 4 - 1) / (BLOCK_SIZE * 4)),
+                        static_cast<unsigned int>(std::min(meta.rows, size_t{65535})));
+        h3_addcmul_rows_kernel<T><<<grid, BLOCK_SIZE, 0, cuda_stream>>>(
+            meta, out_ptr, in_ptr, t1_ptr, t2_ptr, desc->getValue());
+        CHECK_CUDA(cudaGetLastError());
+        return INFINI_STATUS_SUCCESS;
+    }
     uint32_t grid = static_cast<uint32_t>((output_size + BLOCK_SIZE - 1) / BLOCK_SIZE);
 
     addcmul_kernel<T><<<grid, BLOCK_SIZE, 0, cuda_stream>>>(

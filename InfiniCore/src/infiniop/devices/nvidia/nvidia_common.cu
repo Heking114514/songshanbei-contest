@@ -1,5 +1,10 @@
 #include "nvidia_handle.cuh"
 
+#ifdef ENABLE_HYGON_API
+#include <cstdlib>
+#include <cstring>
+#endif
+
 namespace device {
 
 namespace nvidia {
@@ -30,10 +35,31 @@ Handle::Internal::Internal(int device_id) {
 }
 
 infiniStatus_t Handle::Internal::useCublas(cudaStream_t stream, const Fn<cublasHandle_t> &f) const {
+#ifdef ENABLE_HYGON_API
+    // Read once per process, including handles created during initialization.
+    // This controls only InfiniCore's BLAS pool, not PyTorch's handles.
+    static const int deterministic = [] {
+        const char *value = std::getenv("H3_EXPERIMENT_DETERMINISTIC_BLAS");
+        if (value == nullptr || std::strcmp(value, "0") == 0) {
+            return 0;
+        }
+        return std::strcmp(value, "1") == 0 ? 1 : -1;
+    }();
+    CHECK_OR_RETURN(deterministic >= 0, INFINI_STATUS_BAD_PARAM);
+#endif
     auto handle = blas_handles.pop();
     if (!handle) {
         CHECK_CUBLAS(cublasCreate(&(*handle)));
     }
+#ifdef ENABLE_HYGON_API
+    if (deterministic == 1) {
+        const auto status = cublasSetAtomicsMode(*handle, CUBLAS_ATOMICS_NOT_ALLOWED);
+        if (status != CUBLAS_STATUS_SUCCESS) {
+            blas_handles.push(std::move(*handle));
+            CHECK_CUBLAS(status);
+        }
+    }
+#endif
     CHECK_CUBLAS(cublasSetStream(*handle, stream));
     CHECK_STATUS(f(*handle));
     blas_handles.push(std::move(*handle));

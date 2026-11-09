@@ -2,6 +2,7 @@
 #define __ADDCMUL_NVIDIA_H__
 
 #include "../../../elementwise/nvidia/elementwise_nvidia_api.cuh"
+#include "../../../elementwise/nvidia/h3_row_strided.cuh"
 
 namespace op::addcmul::nvidia {
 
@@ -29,6 +30,8 @@ public:
     TensorMeta _t1_meta{};
     TensorMeta _t2_meta{};
     size_t _output_size{0};
+    bool _h3_row_strided{false};
+    op::elementwise::nvidia::H3RowStridedMeta<3> _h3_rows{};
 
     Descriptor(
         infiniDtype_t dtype,

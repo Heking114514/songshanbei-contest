@@ -4,6 +4,10 @@
 
 #include "../../utils.hpp"
 
+#ifdef ENABLE_HYGON_API
+#include "h3_overlap_hygon.hpp"
+#endif
+
 namespace infinicore::op {
 
 INFINICORE_GRAPH_OP_DISPATCHERS_IMPL(LinearAllReduce);
@@ -42,6 +46,26 @@ static Tensor linear_allreduce_impl(
     Size out_features = weight->shape()[weight_is_packed ? 1 : 0];
     auto output_shape = input->shape();
     output_shape.back() = out_features;
+
+#ifdef ENABLE_HYGON_API
+    const size_t overlap_rows = h3_overlap::chunk_rows();
+    if (overlap_rows && input->device().getType() == Device::Type::HYGON
+        && input->dtype() == DataType::BF16 && weight->dtype() == DataType::BF16
+        && !bias && communicator && input->is_contiguous() && weight->is_contiguous()
+        && input->ndim() >= 2 && weight->ndim() == 2
+        && in_features > 0 && input->shape().back() == in_features) {
+        Size tokens = input->numel() / in_features;
+        // H3 long-sequence row projections. Short condition encoding remains old.
+        if (tokens >= 4096 && tokens > overlap_rows && out_features >= 128) {
+            auto output = Tensor::empty(output_shape, input->dtype(), input->device());
+            auto weight_matrix = weight_is_packed ? weight : weight->permute({1, 0});
+            h3_overlap::execute(output->view({tokens, out_features}),
+                                input->view({tokens, in_features}),
+                                weight_matrix, communicator, overlap_rows);
+            return output;
+        }
+    }
+#endif
 
     const bool aclnn_supported = input->dtype() == DataType::F16 || input->dtype() == DataType::BF16;
     if (input->device().getType() == Device::Type::ASCEND && aclnn_supported) {
