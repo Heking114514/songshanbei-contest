@@ -1,6 +1,8 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-更新时间：2026-11-09T19:19:32+08:00（北京时间）。
+更新时间：2026-11-10T03:09:56+08:00（北京时间）。
+
+**版本状态：整改计算代码已保存为本地提交 `4f1ebbc`，尚未推送远端。使用本轮版本时应取本地完整源码；下方远端 `main` 下载命令仅获取已发布版本，不包含本地尚未推送的整改。**
 
 统一首帧：`inputs/first_frame.png`；统一 FL2VA Prompt：**A dog falls asleep**。
 
@@ -8,9 +10,9 @@
 
 ### 1. 源码与依赖下载
 
-下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
+远端发布后的常规获取方式是下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
 
-仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
+本轮仍使用现有离线依赖，无需更换 ZIP 或增加 wheel。仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
 
 ### 2. 文件上传
 
@@ -39,7 +41,7 @@
 bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ```
 
-脚本自动解压依赖、安装环境、准备工具链、`-j120` 编译、完整八卡推理并保存结果，进度实时打印。无需手工切换环境或分步编译。
+脚本依次执行源码暂存、依赖解压与安装、工具链准备、`-j120` 编译、完整八卡推理和结果保存，进度实时打印。本次整改版已通过增量续跑，按本页完整流程从干净环境一键启动的复验仍待完成。
 
 平台需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享模型 `/public/home/aclsylqidf/shared/MiniMax-H3`。默认使用完整模型、seed42、50步请求、124帧；**不加 check，官方比较在视频下载后于本地进行。**
 
@@ -63,6 +65,8 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 确认视频和保存清单已在 AFS 中，再**释放八卡资源**。节点临时目录会随资源回收，最终产物以 AFS 结果目录为准。
 
 ### 5. 总结
+
+以下保留常规远端获取与运行流程。当前整改尚未推送；使用本地版本时，以本地完整源码目录替代第一步 clone 的源码，并保留相同目录结构和依赖 ZIP。
 
 ```bash
 # ==========================================================
@@ -135,15 +139,28 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
 ### 1. 完成了什么
 
-- 完成 H3 原生 DiT 八卡并行和音频 SnakeBeta 算子适配；条件编码、VAE 等组件继续使用 PyTorch/Diffusers。
-- 完成源码与离线依赖交付，一条命令自动构建、生成视频并保存日志；同节点重试可复用环境和未变化的编译对象。
-- 合规改造前的历史运行曾从零到保存视频 **34分50秒**，视频为 124帧、768×928、24fps，含音轨；该数据早于当前显式 Attention 和正式/实验边界调整，不能作为本次源码的性能或正确性证据。
-- 当前版本需重新完成八卡完整 FL2VA、逐实际形状 Attention、完整音频与官方比较，之后才能更新正式结果。
+- H3 DiT 使用 InfiniLM/InfiniCore 原生 TP8，Attention 计算沿用官方已有的显式 QKᵀ/scale/softmax/PV；RMSNorm、MRoPE 恢复官方实现，实验 ATen conv/groupnorm/Snake 后端排除在正式构建之外。
+- 音频 SnakeBeta 使用 NineToothed Python JIT，exp(alpha)、exp(beta)、sin 和归一化均在生成的九齿 kernel 内完成。native 条件编码保留数学 BF16 SDPA；条件编码、VAE 和调度继续使用原有 PyTorch/Diffusers 路径。
+- 本地69项流程回归、SnakeBeta三组FP32和MHA7头五种序列长度断言通过；MHA最大绝对误差为0，SnakeBeta最大绝对误差约5.25e-6。
+- 2026-11-10完成124帧、50步请求（49次DiT）、seed42的完整八卡FL2VA，推理及AFS保存均退出0。该次运行使用提交前的整改工作树，计算代码现已保存为本地提交 `4f1ebbc`。
+
+| 当前整改版实测 | 结果 |
+|---|---|
+| 模型端到端 | 505.878秒；DiT共410.488秒、49次、平均8.377秒/次 |
+| 视频与音频 | 124帧，768×928，24fps；AAC双声道、32000Hz，音视频解码通过 |
+| 原版官方比较：历史reference | Size/Length PASS，SSIM97.030% |
+| 原版官方比较：独立官方0.40.0基线 | Size/Length PASS，SSIM92.232% |
+| 同节点增量 | 1188对象中1061个大小/mtime未变，127个InfiniLM对象重编 |
+| 缓存 | 独立1188对象归档约350MiB已存AFS；跨节点恢复未验证 |
+
+本轮有人工修复后resume和先算子验证预热，505.878秒是模型日志计时，不是源码上传至构建、生成、保存的总时间。历史reference使用math_bf16/head_batch4；两份参考分别报告，不提供同轮双方加速比。音频解码通过不代表音质已经验收。旧版34分50秒冷启动成绩不适用于当前整改版。
+
+当前结论为“主要算子边界已整改、单个完整用例跑通”；多用例连续验证、干净环境一键复验和交付材料仍待收口，不宣称已完全通过赛事合规验收。底层官方CLI支持输入参数，正式封装仍固定Prompt、seed、步数与帧数，换例限制见[技术补充](REPRODUCE.md)。
 
 ### 2. 后续改进
 
 - **数值一致性**：对照条件编码、注意力、音视频潜变量和解码输出，定位两端差异及不同运行间的 SSIM 波动，补充音频波形与听感检查。
 - **算子性能**：针对显式 Attention、基础矩阵乘和通信开展同输入、同环境对照，数值验证通过后再更新性能结论。
-- **复现效率**：减少冷编译开销，完善跨节点缓存恢复和失败后增量重试，并补充不同首帧用例的完整验证。
+- **交付与复现**：贯通正式封装的换例参数及记录/自检，补充不同图片和Prompt的连续完整验证、干净环境一键复验；修复头文件mtime与重复prepare/build引起的LM重编，验证跨节点缓存恢复。
 
 环境目录、换图、可选 check 及依赖维护统一见 [技术补充](REPRODUCE.md)。
