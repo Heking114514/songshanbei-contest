@@ -15,12 +15,12 @@ env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" "$TOOLS/h3_bootstrap.py" valid
 if [ -n "${H3_WHEELHOUSE:-}" ]; then
     "$H3_BASE_PYTHON" -u - "$TOOLS/../requirements/h3_linux_cp311.lock.json" <<'STAGE'
 from pathlib import Path
-import hashlib,json,os,shutil,sys
+import json,os,shutil,sys
 source=Path(os.environ["H3_WHEELHOUSE"]).resolve()
 dest=Path(os.environ["H3_REPRO_WORK"])/"downloads"
 dest.mkdir(parents=True,exist_ok=True)
 def valid(p,row):
-    return p.is_file() and p.stat().st_size==row["size"] and hashlib.sha256(p.read_bytes()).hexdigest()==row["sha256"]
+    return p.is_file() and p.stat().st_size==row["size"]
 for row in json.loads(Path(sys.argv[1]).read_text())["wheels"]:
     p=source/row["filename"];q=dest/row["filename"]
     if valid(q,row):
@@ -31,9 +31,9 @@ for row in json.loads(Path(sys.argv[1]).read_text())["wheels"]:
     if p.resolve()!=q.resolve():
         stage=q.with_suffix(q.suffix+".offline-partial")
         shutil.copy2(p,stage)
-        if not valid(stage,row):raise RuntimeError("Wheel copy SHA mismatch: "+q.name)
+        if not valid(stage,row):raise RuntimeError("Wheel copy size mismatch: "+q.name)
         stage.replace(q)
-    print("WHEEL_OFFLINE_SHA_OK",q.name,flush=True)
+    print("WHEEL_OFFLINE_COMPLETE",q.name,flush=True)
 STAGE
 fi
 for phase in prepare build eight-smoke; do

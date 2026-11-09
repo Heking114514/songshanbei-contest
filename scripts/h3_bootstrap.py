@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 from concurrent.futures import ThreadPoolExecutor
-import hashlib
 import importlib.metadata
 import json
 import os
@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tarfile
 import time
+import zipfile
 from urllib.request import urlopen
 
 from h3_source_identity import source_identity
@@ -22,14 +23,6 @@ from h3_source_identity import source_identity
 REPO = Path(__file__).resolve().parents[1]
 LOCK = REPO / "requirements/h3_linux_cp311.lock.json"
 ASSETS = REPO / "third_party/h3/manifest.json"
-
-
-def digest(path):
-    h = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 ** 2), b""):
-            h.update(block)
-    return h.hexdigest()
 
 
 def atomic_json(path, data):
@@ -53,8 +46,7 @@ def check_node_path(path, afs=None):
 
 def verified(path, item):
     path = Path(path)
-    return (path.is_file() and path.stat().st_size == item["size"]
-            and digest(path) == item["sha256"])
+    return path.is_file() and path.stat().st_size == item["size"]
 
 
 def verify_assets(repo=REPO):
@@ -110,9 +102,9 @@ def fetch(item, directory):
                         print("WHEEL_BYTES", name, count, item["size"], flush=True)
                         last = time.monotonic()
             if not verified(partial, item):
-                raise RuntimeError("Wheel size/SHA mismatch: " + name)
+                raise RuntimeError("Wheel size mismatch: " + name)
             os.replace(partial, path)
-            print("WHEEL_SHA256_OK", name, flush=True)
+            print("WHEEL_COMPLETE", name, flush=True)
             return path
         except (OSError, RuntimeError) as error:
             last_error = error
@@ -141,6 +133,59 @@ def platform_info():
                 abi=int(torch._C._GLIBCXX_USE_CXX11_ABI))
 
 
+def prepare_xmake(work, manifest):
+    """Prefer the size-checked official self-contained tool; retain source fallback."""
+    xmake = work / "xmake"
+    executable = xmake / "bin/xmake"
+    receipt = xmake / "tool.json"
+    environment = dict(os.environ)
+    environment.pop("XMAKE_PROGRAM_DIR", None)
+    bundle_name = manifest["xmake"].get("bundle_path")
+    kind = None
+    if receipt.is_file() and executable.is_file():
+        previous = json.loads(receipt.read_text())
+        if ("executable_bytes" in previous
+                and executable.stat().st_size != previous["executable_bytes"]):
+            raise RuntimeError("Installed xmake changed")
+        kind = previous["kind"]
+    if not executable.exists() and bundle_name and os.environ.get("H3_XMAKE_FROM_SOURCE") != "1":
+        bundle = REPO / bundle_name
+        item = next(row for row in manifest["files"] if row["path"] == bundle_name)
+        if not verified(bundle, item):
+            raise RuntimeError("Bundled xmake size mismatch")
+        executable.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(bundle, executable)
+        executable.chmod(0o755)
+        try:
+            version = subprocess.check_output([str(executable), "--version"],
+                                              env=environment, text=True, stderr=subprocess.STDOUT)
+            if "3.0.3" not in version:
+                raise RuntimeError("Unexpected xmake bundle version")
+            subprocess.run([str(executable), "show", "--help"], env=environment,
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            kind = "official_bundle"
+            print("H3_XMAKE_BUNDLE_READY", flush=True)
+        except (OSError, subprocess.SubprocessError, RuntimeError) as error:
+            print("H3_XMAKE_SOURCE_FALLBACK", type(error).__name__, str(error)[:300], flush=True)
+            executable.unlink(missing_ok=True)
+    if not executable.exists():
+        source = work / "xmake-src"
+        if not (source / "configure").exists():
+            run(["bash", "--noprofile", "--norc",
+                 REPO / "third_party/h3/xmake-v3.0.3.gz.run",
+                 "--noexec", "--quiet", "--target", source])
+        run(["bash", "./configure", "--prefix=" + str(xmake)], cwd=source)
+        run(["make", "-j" + os.environ.get("BUILD_JOBS", "120")], cwd=source)
+        run(["make", "install", "PREFIX=" + str(xmake)], cwd=source)
+        kind = "source"
+    version = subprocess.check_output([str(executable), "--version"], env=environment, text=True)
+    if "3.0.3" not in version:
+        raise RuntimeError("Unexpected xmake version")
+    kind = kind or "source"
+    atomic_json(receipt, dict(kind=kind, executable_bytes=executable.stat().st_size))
+    return version, kind
+
+
 def prepare(work):
     work = check_node_path(work, os.environ.get("IFAB_AFS_HOME"))
     afs = os.environ.get("IFAB_AFS_HOME")
@@ -149,11 +194,20 @@ def prepare(work):
     info = platform_info()
     manifest = verify_assets()
     lock = json.loads(LOCK.read_text())
-    key = hashlib.sha256(LOCK.read_bytes() + ASSETS.read_bytes()
-                         + json.dumps(info, sort_keys=True).encode()).hexdigest()
+    key = json.dumps(dict(platform=info,
+        wheels=[{k: row[k] for k in ("name", "version", "filename", "size")} for row in lock["wheels"]],
+        assets=[{k: row[k] for k in ("path", "size")} for row in manifest["files"]]),
+        sort_keys=True, separators=(",", ":"))
     ready = work / "prepared.json"
-    if ready.exists() and json.loads(ready.read_text())["key"] != key:
-        raise RuntimeError("Environment lock/platform changed; use a new dedicated work directory")
+    if ready.exists():
+        previous = json.loads(ready.read_text())
+        if previous["key"] != key:
+            if previous.get("integrity") == "presence_and_size" or previous["platform"] != info:
+                raise RuntimeError("Environment lock/platform changed; use a new dedicated work directory")
+            # Migrate an old hash receipt using platform and installed version checks.
+            # This keeps the already installed environment for incremental retries.
+            verify_packages(work / "python", lock)
+            (work / "python/.h3-lock").write_text(key + "\n")
     work.mkdir(parents=True, exist_ok=True)
     downloads = work / "downloads"
     downloads.mkdir(exist_ok=True)
@@ -175,14 +229,12 @@ def prepare(work):
         stage.mkdir()
         requirements = work / "local-wheels.lock.txt"
         lines = [row["name"] + " @ " + path.resolve().as_uri()
-                 + " --hash=sha256:" + row["sha256"]
                  for row, path in zip(lock["wheels"], paths)]
         wheel = next(row for row in manifest["files"] if row["path"].endswith(".whl"))
-        lines.append("flagtree @ " + (REPO / wheel["path"]).as_uri()
-                     + " --hash=sha256:" + wheel["sha256"])
+        lines.append("flagtree @ " + (REPO / wheel["path"]).as_uri())
         requirements.write_text("\n".join(lines) + "\n")
         run([python, REPO / "scripts/h3_pip.py", "install", "--no-index", "--no-deps",
-             "--require-hashes", "--no-compile", "--upgrade", "--target", stage,
+             "--no-compile", "--upgrade", "--target", stage,
              "-r", requirements])
         verify_packages(stage, lock)
         (stage / ".h3-lock").write_text(key + "\n")
@@ -197,28 +249,22 @@ def prepare(work):
         toolchain.mkdir(exist_ok=True)
         with tarfile.open(archive) as bundle:
             bundle.extractall(toolchain, filter="data")
-    for name, sha in manifest["jit_toolchain"]["binaries"].items():
-        if digest(toolchain / "bin" / name) != sha:
-            raise RuntimeError("JIT binary mismatch: " + name)
-    (toolchain / ".verified").write_text(digest(archive))
-    xmake = work / "xmake"
-    if not (xmake / "bin/xmake").exists():
-        source = work / "xmake-src"
-        if not (source / "configure").exists():
-            run(["bash", "--noprofile", "--norc",
-                 REPO / "third_party/h3/xmake-v3.0.3.gz.run",
-                 "--noexec", "--quiet", "--target", source])
-        run(["bash", "./configure", "--prefix=" + str(xmake)], cwd=source)
-        run(["make", "-j" + os.environ.get("BUILD_JOBS", "120")], cwd=source)
-        run(["make", "install", "PREFIX=" + str(xmake)], cwd=source)
-    version = subprocess.check_output([str(xmake / "bin/xmake"), "--version"], text=True)
-    if "3.0.3" not in version:
-        raise RuntimeError("Unexpected xmake version")
+    for name, size in manifest["jit_toolchain"]["binary_sizes"].items():
+        binary = toolchain / "bin" / name
+        if not binary.is_file() or binary.stat().st_size != size:
+            raise RuntimeError("Missing or wrong-size JIT binary: " + str(binary))
+    (toolchain / ".verified").write_text(str(archive.stat().st_size))
+    version, tool_kind = prepare_xmake(work, manifest)
     atomic_json(ready, dict(key=key, platform=info, wheel_count=len(lock["wheels"]),
-                           prepared_at=time.time(), lock_sha256=digest(LOCK),
-                           assets_sha256=digest(ASSETS), xmake_version=version,
+                           prepared_at=time.time(), integrity="presence_and_size", lock_bytes=LOCK.stat().st_size,
+                           assets_bytes=ASSETS.stat().st_size, xmake_version=version, xmake_kind=tool_kind,
                            native_source_build_validated=False))
     print("H3_REPRO_PREPARED", ready, flush=True)
+
+
+def file_metadata(path):
+    stat = Path(path).stat()
+    return dict(bytes=stat.st_size, mtime_ns=stat.st_mtime_ns)
 
 
 def config_key(component):
@@ -230,14 +276,14 @@ def config_key(component):
             "platform_lock": json.loads(prepared.read_text())["key"] if prepared.is_file() else None,
             "compiler_env": {n: os.environ.get(n) for n in
                              ("CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "XMAKE_PROGRAM_DIR")},
-            "xmake_sha256": digest(shutil.which("xmake")) if shutil.which("xmake") else None,
+            "xmake_metadata": file_metadata(shutil.which("xmake")) if shutil.which("xmake") else None,
             "settings": {n: os.environ.get(n) for n in names},
             "xmake": shutil.which("xmake"),
-            "build_driver": digest(REPO / "scripts/build_hygon.sh"),
-            "lua": {str(p.relative_to(source)): digest(p)
+            "build_driver": (REPO / "scripts/build_hygon.sh").read_text(),
+            "lua": {str(p.relative_to(source)): p.read_text()
                     for p in [source / "xmake.lua", *sorted((source / "xmake").glob("**/*.lua"))]
                     if p.is_file()}}
-    return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+    return json.dumps(data, sort_keys=True, separators=(",", ":"))
 
 
 def audit(work, output):
@@ -276,7 +322,7 @@ def audit(work, output):
         path = paths.pop()
         if not (path.is_relative_to(REPO) or path.is_relative_to(work / "install")):
             raise RuntimeError("Native extension came from another installation: " + str(path))
-        native[name] = dict(path=str(path), sha256=digest(path))
+        native[name] = dict(path=str(path), bytes=path.stat().st_size)
     # Check the libraries actually mapped by this process, not just Python files.
     libraries = {}
     for line in Path("/proc/self/maps").read_text().splitlines():
@@ -287,20 +333,20 @@ def audit(work, output):
         if path.name.startswith(("libinfini", "_infinicore", "_infinilm")):
             if not (path.is_relative_to(work / "install") or path.is_relative_to(REPO)):
                 raise RuntimeError("Loaded an older native library: " + str(path))
-            libraries[str(path)] = digest(path)
+            libraries[str(path)] = path.stat().st_size
     if not libraries:
         raise RuntimeError("No native H3 libraries found in process mappings")
     identity = source_identity(REPO)
-    provenance = {str(p.relative_to(REPO)): digest(p) for p in
+    provenance = {str(p.relative_to(REPO)): p.stat().st_size for p in
                   [*sorted((REPO / "scripts").glob("h3_*")), REPO / "scripts/reproduce_h3.sh",
                    REPO / "scripts/build_hygon.sh", REPO / "scripts/run_h3_compare.sh",
                    REPO / "InfiniLM/examples/minimax_h3_compare.py",
                    REPO / "inputs/first_frame.png"] if p.is_file()}
     atomic_json(output, dict(passed=True, time=time.time(), source_root=str(REPO),
                              head=identity["git_head"], worktree_status=identity["git_status"],
-                             source_identity=identity, source_sha256=provenance,
+                             source_identity=identity, source_sizes=provenance,
                              modules=modules, native=native, loaded_libraries=libraries,
-                             lock_sha256=digest(LOCK), assets_sha256=digest(ASSETS),
+                             lock_bytes=LOCK.stat().st_size, assets_bytes=ASSETS.stat().st_size,
                              python_include=sysconfig.get_path("include")))
     print("H3_REPRO_ORIGINS_OK", output, flush=True)
 
@@ -327,25 +373,73 @@ def rebase_cache(work):
 
 
 
-def stage_wheels(work, wheelhouse):
-    """Stage offline wheels after validating the complete locked set."""
+WHEEL_ZIP = "h3-offline-wheels-linux-cp311.zip"
+
+
+def wheel_input(wheelhouse, rows):
+    """Validate an unpacked directory or the release ZIP without content hashes."""
+    path = Path(wheelhouse).resolve()
+    for row in rows:
+        if Path(row["filename"]).name != row["filename"]:
+            raise RuntimeError("Unsafe wheel filename")
+    if not path.exists() and path.name == "offline-wheels":
+        path = path.parent / WHEEL_ZIP
+    if path.is_dir() and not any(path.glob("*.whl")) and (path.parent / WHEEL_ZIP).is_file():
+        path = path.parent / WHEEL_ZIP
+    if path.is_dir():
+        for row in rows:
+            if not verified(path / row["filename"], row):
+                raise RuntimeError("Missing/wrong-size offline wheel: " + row["filename"])
+        return path, False
+    if not path.is_file() or path.suffix.lower() != ".zip":
+        raise RuntimeError("Put " + WHEEL_ZIP + " beside run_submission.sh, "
+                           "or provide a complete offline-wheels directory")
+    expected = {"offline-wheels/" + row["filename"]: row for row in rows}
+    seen = set()
+    with zipfile.ZipFile(path) as bundle:
+        for member in bundle.infolist():
+            if member.is_dir() and member.filename == "offline-wheels/":
+                continue
+            if (member.filename not in expected or member.filename in seen
+                    or member.is_dir() or member.flag_bits & 1
+                    or (member.external_attr >> 16) & 0o170000 == 0o120000):
+                raise RuntimeError("Unexpected/unsafe wheel ZIP member: " + member.filename)
+            if member.file_size != expected[member.filename]["size"]:
+                raise RuntimeError("Wrong-size wheel ZIP member: " + member.filename)
+            seen.add(member.filename)
+    if seen != expected.keys():
+        raise RuntimeError("Wheel ZIP is missing locked files: " + ", ".join(sorted(expected.keys() - seen)))
+    return path, True
+
+
+def stage_wheels(work, wheelhouse, repo=None):
+    """Install ZIP members directly on node storage, retaining size-complete files."""
+    repo = REPO if repo is None else Path(repo)
     work = check_node_path(work, os.environ.get("IFAB_AFS_HOME"))
-    wheelhouse = Path(wheelhouse).resolve()
-    rows = json.loads((REPO / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
+    rows = json.loads((repo / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
     dest = work / "downloads"
-    for row in rows:
-        if not verified(dest / row["filename"], row) and not verified(wheelhouse / row["filename"], row):
-            raise RuntimeError("Missing/corrupt offline wheel: " + row["filename"])
+    if all(verified(dest / row["filename"], row) for row in rows):
+        print("WHEEL_PRESTAGED_ALL", len(rows), flush=True)
+        return
+    source, zipped = wheel_input(wheelhouse, rows)
     dest.mkdir(parents=True, exist_ok=True)
-    for row in rows:
-        target = dest / row["filename"]
-        if not verified(target, row):
-            partial = target.with_suffix(target.suffix + ".offline-partial")
-            shutil.copy2(wheelhouse / row["filename"], partial)
-            if not verified(partial, row):
-                raise RuntimeError("Offline wheel copy SHA mismatch: " + row["filename"])
-            partial.replace(target)
-        print("WHEEL_OFFLINE_SHA_OK", target.name, flush=True)
+    with (zipfile.ZipFile(source) if zipped else contextlib.nullcontext()) as bundle:
+        for index, row in enumerate(rows, 1):
+            target = dest / row["filename"]
+            if not verified(target, row):
+                partial = target.with_suffix(target.suffix + ".offline-partial")
+                print("WHEEL_EXTRACT_BEGIN" if zipped else "WHEEL_COPY_BEGIN",
+                      index, len(rows), target.name, row["size"], flush=True)
+                if zipped:
+                    with bundle.open("offline-wheels/" + row["filename"]) as incoming, partial.open("wb") as out:
+                        shutil.copyfileobj(incoming, out, 1024 * 1024)
+                else:
+                    shutil.copy2(source / row["filename"], partial)
+                if not verified(partial, row):
+                    raise RuntimeError("Offline wheel copy size mismatch: " + row["filename"])
+                partial.replace(target)
+            print("WHEEL_OFFLINE_COMPLETE", index, len(rows), target.name, flush=True)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

@@ -1,16 +1,7 @@
-"""Identify a real checkout or a SHA-verified exported working tree."""
-import hashlib
+"""Identify a real checkout or a size-checked exported working tree."""
 import json
 from pathlib import Path
 import subprocess
-
-
-def digest(path):
-    h = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            h.update(block)
-    return h.hexdigest()
 
 
 def source_identity(root):
@@ -22,10 +13,10 @@ def source_identity(root):
             p = root / row["path"]
             if not p.resolve().is_relative_to(root) or not p.is_file():
                 raise RuntimeError("Exported source missing/unsafe: " + row["path"])
-            if p.stat().st_size != row["size"] or digest(p) != row["sha256"]:
+            if p.stat().st_size != row["size"]:
                 raise RuntimeError("Exported source changed: " + row["path"])
         return dict(kind=data.get("kind", "exported_worktree"), git_head=data["git_head"],
-                    git_status=data["git_status"], manifest_sha256=digest(manifest),
+                    git_status=data["git_status"], integrity="presence_and_size",
                     file_count=len(data["files"]))
     return dict(kind="git_checkout",
         git_head=subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip(),

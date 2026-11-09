@@ -35,10 +35,10 @@ class WorkflowTests(unittest.TestCase):
         (self.repo / "requirements").mkdir()
         row = dict(filename="a.whl", size=4, sha256=hashlib.sha256(b"good").hexdigest())
         (self.repo / "requirements/h3_linux_cp311.lock.json").write_text(json.dumps({"wheels": [row]}))
-        wheels = self.root / "wheels";wheels.mkdir();(wheels / "a.whl").write_bytes(b"bad!")
+        wheels = self.root / "wheels";wheels.mkdir();(wheels / "a.whl").write_bytes(b"bad")
         work = self.root / "work"
         with patch.object(bootstrap, "REPO", self.repo), patch.dict(os.environ, {"IFAB_AFS_HOME": str(self.root / "afs")}):
-            with self.assertRaisesRegex(RuntimeError, "corrupt offline wheel"):
+            with self.assertRaisesRegex(RuntimeError, "wrong-size offline wheel"):
                 bootstrap.stage_wheels(work, wheels)
         self.assertFalse(work.exists())
 
@@ -87,6 +87,10 @@ with open(os.environ['TRACE'],'a') as f:
     f.write(json.dumps(dict(kind=kind,phase=phase,native=os.environ.get('H3_INFINILM_VIDEO'),gpu_check=os.environ['H3_GPU_CHECK_MODE']))+'\\n')
 key='FAIL_'+dict(phase=phase,bootstrap=phase,generation='generate',compare='compare',record=phase,delivery=phase).get(kind,phase).upper()
 if os.environ.get(key):raise SystemExit(int(os.environ[key]))
+if kind=='phase' and phase=='build':
+    with open(os.environ['TRACE'],'a') as f:
+        f.write(json.dumps(dict(kind='bootstrap',phase='audit',native=None,gpu_check=os.environ['H3_GPU_CHECK_MODE']))+'\\n')
+    if os.environ.get('FAIL_AUDIT'):raise SystemExit(int(os.environ['FAIL_AUDIT']))
 if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
 """
         for name,kind in (("h3_bootstrap.py","bootstrap"),("h3_delivery.py","delivery"),
@@ -130,6 +134,7 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         self.assertEqual([x["phase"] for x in rows if x["kind"]=="phase"],["prepare","build"])
         self.assertEqual(len([x for x in rows if x["kind"]=="generation"]),1)
         self.assertFalse(any(x["kind"]=="compare" for x in rows))
+        self.assertEqual(len([x for x in rows if x["kind"]=="bootstrap" and x["phase"]=="audit"]),1)
         self.assertEqual([x["phase"] for x in rows if x["kind"]=="record"],["begin","native-check","status"])
         self.assertTrue(all(x["gpu_check"]=="inventory" for x in rows))
         self.assertEqual(rows[-1]["phase"],"persist")
@@ -189,7 +194,8 @@ if kind=='record' and phase=='status':raise SystemExit(int(sys.argv[-1]))
         run,env=self.storage_env()
         (run/"result.mp4").write_bytes(b"video")
         with patch.dict(os.environ,env),contextlib.redirect_stdout(io.StringIO()):
-            delivery.reserve(run);delivery.persist(run,43)
+            with patch.object(hashlib, "sha256", side_effect=AssertionError("SHA256 called")):
+                delivery.reserve(run);delivery.persist(run,43)
         dest=Path(env["H3_AFS_OUTPUT_DIR"])
         receipt=json.loads((dest/"saved-manifest.json").read_text())
         self.assertEqual(receipt["pipeline_rc"],43)

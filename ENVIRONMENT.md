@@ -1,6 +1,6 @@
 # 源码、离线依赖与运行环境的位置
 
-更新时间：2026-11-09T01:19:29+08:00（北京时间）。
+更新时间：2026-11-09T11:12:27+08:00（北京时间）。
 
 启动命令与取结果见 [README](README.md)，依赖获取见 [PACKAGING.md](PACKAGING.md)。
 
@@ -9,7 +9,8 @@
 | 位置 | 内容 |
 |---|---|
 | `个人AFS/songshanbei-contest/` | 上传的源码、三份工具、图片和参考视频 |
-| `个人AFS/songshanbei-contest/offline-wheels/` | 放入的55个普通wheel |
+| `个人AFS/songshanbei-contest/h3-offline-wheels-linux-cp311.zip` | 推荐：原名放置的离线包，自动在节点解压 |
+| `个人AFS/songshanbei-contest/offline-wheels/` | 可选：已解压的55个普通wheel；与ZIP二选一 |
 | `个人AFS/h3-results/run-时间戳-进程号/` | 自动保存的本次视频、日志及比较结果 |
 
 ## 节点目录
@@ -30,7 +31,7 @@ $H3_NODE_ROOT/
 │   ├── install/                   # InfiniCore/InfiniLM原生库
 │   ├── toolchain/                 # clang/lld
 │   ├── xmake/
-│   ├── downloads/                 # 校验后的离线wheel副本
+│   ├── downloads/                 # 大小检查后的离线wheel副本
 │   ├── config/                    # 增量构建配置
 │   ├── jit/
 │   └── prepared.json
@@ -50,3 +51,9 @@ Python3.11与Torch2.9.0/HIP6.3由平台/usr/local提供，DTK/gfx936由/opt/dtk�
 若终端已切换过多个目录，重新打开Bash使用推荐命令，或通过H3_NODE_ROOT指定已有节点工程目录。不会自动回退到/tmp、AFS或受限workspace内构建。
 
 同节点同源码目录重复运行，未变化的源码保持mtime，环境和对象保留；源码更新后增量编译。节点回收后，节点环境和对象回收；AFS源码、wheel和结果保留。
+
+当前部署优化：源码校验、复制及复制后核验默认16线程（H3_STAGE_WORKERS，可设1..32）；仅用存在性、字节数和mtime检查同步状态，不读取文件内容计算SHA；节点文件大小或mtime发生独立变化时拒绝覆盖，未变文件保持mtime。xmake优先使用随源码提供的官方3.0.3自包含工具，无法运行时回退源码构建；H3原生库始终源码编译。正式工作流只执行一次完整来源审计，直接保存本次origins.json；环境脚本从prepared.json读取平台Torch位置，不为查询路径重复导入Torch。
+
+完整性策略：工具与wheel核对存在性及清单字节数，安装/解压工具负责读取归档格式；图片和视频进行真实解码。来源审计仍确认Python模块和实际映射原生库来自本次节点目录。保存到AFS使用.partial文件、大小检查和原子改名，不做内容哈希。构建配置直接记录配置值及工具大小/mtime，避免为配置缓存再次读取整个二进制。相同大小且mtime未变化的内容替换不在此完整性检查的检测范围内。
+
+ZIP处理：源端只读取ZIP中央目录、成员名和大小，解压直接写入节点work/downloads/，解压中检查格式/CRC并逐文件原子改名。该目录后续作为离线wheel来源，避免额外复制。已完整提取的文件同节点重试直接复用；失败的.partial不会用于安装。AFS中不生成offline-wheels副本。

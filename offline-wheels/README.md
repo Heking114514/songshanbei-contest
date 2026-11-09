@@ -1,7 +1,5 @@
-# 离线依赖放在这里
+# 离线依赖
 
-将 `requirements/h3_linux_cp311.lock.json` 中的 **55 个 wheel**原名直接放到本目录，共 192,118,057 字节（约183MiB）。
+推荐将 h3-offline-wheels-linux-cp311.zip 原名放到仓库根目录，与 run_submission.sh 同级，**不要放到本目录，也不需要手工解压**。启动脚本会自动解压到节点盘；本目录只有README时不会阻止自动识别ZIP。
 
-获取与校验命令见 [离线依赖说明](../PACKAGING.md)。当前尚未发布配套 Release。三份构建工具已经在 `third_party/h3/`，无需放入此目录。
-
-上传时，本目录与仓库源码一起保留在 AFS。启动命令及输出位置见 [README](../README.md)。
+也兼容把55个wheel原名放到本目录。两种方式选一种；本目录含wheel时优先使用目录，文件必须齐全且大小正确。放置、启动与取视频见仓库根README。

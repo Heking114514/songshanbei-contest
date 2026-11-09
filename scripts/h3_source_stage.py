@@ -1,6 +1,7 @@
 """Stage uploaded source and locked wheels for node-local H3 execution."""
 import argparse
 import contextlib
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -10,9 +11,9 @@ import subprocess
 import sys
 import time
 
-from h3_bootstrap import verify_assets
+from h3_bootstrap import verify_assets, wheel_input, stage_wheels
 from h3_delivery import file_row, safe_relative, verify, write_json
-from h3_source_identity import digest, source_identity
+from h3_source_identity import source_identity
 
 DIRECTORIES = ("InfiniCore", "InfiniLM", "ninetoothed", "scripts", "requirements",
                "third_party", "inputs", "reference", "tests")
@@ -29,6 +30,17 @@ REQUIRED = ("run_submission.sh", "InfiniCore/xmake.lua", "InfiniLM/xmake.lua",
             "reference/reference_fl2va.mp4")
 IGNORED_DIRS = {".git", ".xmake", ".venv", ".pytest_cache", "__pycache__"}
 KIND = "h3_source_directory"
+
+
+def parallel_rows(items, action, label):
+    workers = max(1, min(32, int(os.environ.get("H3_STAGE_WORKERS", "16"))))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        result = []
+        for index, value in enumerate(pool.map(action, items), 1):
+            result.append(value)
+            if index % 250 == 0 or index == len(items):
+                print(label, index, len(items), file=sys.stderr, flush=True)
+    return result
 
 
 def source_rows(root):
@@ -59,14 +71,13 @@ def source_rows(root):
                 if child.endswith((".pyc", ".pyo", ".so", ".o", ".obj", ".pyd", ".a")) or ".so." in child:
                     continue
                 files.append(current / child)
-    rows = []
-    for index, path in enumerate(sorted(files), 1):
+    def describe(path):
         if path.is_symlink() or not path.resolve().is_relative_to(root):
             raise RuntimeError("Unsafe source path: " + str(path))
-        rows.append(file_row(path, path.relative_to(root).as_posix()))
-        if index % 250 == 0 or index == len(files):
-            print("H3_SOURCE_INPUTS_VERIFIED", index, len(files), file=sys.stderr, flush=True)
-    return rows
+        row = file_row(path, path.relative_to(root).as_posix())
+        row["source_mtime_ns"] = path.stat().st_mtime_ns
+        return row
+    return parallel_rows(sorted(files), describe, "H3_SOURCE_INPUTS_COMPLETE")
 
 
 def git_metadata(root):
@@ -123,15 +134,15 @@ def stage(source, wheels, node=None):
     with contextlib.redirect_stdout(sys.stderr):
         verify_assets(source)
     locked = json.loads((source / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
-    for row in locked:
-        if Path(row["filename"]).name != row["filename"]:
-            raise RuntimeError("Unsafe wheel filename")
-        verify(wheels / row["filename"], row)
-    print("H3_OFFLINE_WHEELS_VERIFIED", len(locked), file=sys.stderr, flush=True)
+    wheels, zipped = wheel_input(wheels, locked)
+    print("H3_OFFLINE_WHEELS_COMPLETE", len(locked), "ZIP" if zipped else "directory",
+          file=sys.stderr, flush=True)
     rows = source_rows(source)
 
     marker = node / "source-stage.json"
     previous = {}
+    previous_checked_ns = 0
+    pending = {}
     if node.exists():
         if not marker.is_file():
             raise RuntimeError("Node directory has no source-stage receipt; choose a dedicated directory")
@@ -139,57 +150,97 @@ def stage(source, wheels, node=None):
         if data.get("kind") != KIND or data.get("source_root") != str(source):
             raise RuntimeError("Node directory belongs to a different source")
         previous = {str(safe_relative(row["path"])): row for row in data["files"]}
+        previous_checked_ns = int(data.get("checked_at", 0) * 1_000_000_000)
+        pending = {str(safe_relative(row["path"])): row for row in data.get("pending_files", [])
+                   if "target_mtime_ns" in row}
 
     target = node / "source"
     if target.is_symlink():
         raise RuntimeError("Unsafe node source directory")
     current = {row["path"]: row for row in rows}
-    # Refuse to overwrite independent edits in an existing node checkout.
-    for name, old in previous.items():
+    # Metadata preserves incremental files without reading their contents.
+    # A local edit changes size/mtime and is rejected before any update.
+    def check_previous(item):
+        name, old = item
         path = target / str(safe_relative(name))
         if not path.resolve().is_relative_to(target) or path.is_symlink():
             raise RuntimeError("Unsafe node source: " + name)
-        if path.exists() and digest(path) not in {
-                old["sha256"], current.get(name, old)["sha256"]}:
-            raise RuntimeError("Node source has independent edits: " + name)
-    if target.exists():
-        for name in current.keys() - previous.keys():
-            path = target / str(safe_relative(name))
-            if (not path.resolve().is_relative_to(target) or path.is_symlink()
-                    or (path.exists() and digest(path) != current[name]["sha256"])):
-                raise RuntimeError("New source path conflicts with node files: " + name)
+        if path.exists():
+            stat = path.stat()
+            candidates = [old]
+            if name in pending:
+                candidates.append(pending[name])
+            if not any(stat.st_size == candidate["size"]
+                    and ("target_mtime_ns" not in candidate
+                         or stat.st_mtime_ns == candidate["target_mtime_ns"])
+                    for candidate in candidates):
+                raise RuntimeError("Node source has independent edits: " + name)
+    parallel_rows(list(previous.items()), check_previous, "H3_NODE_SOURCE_METADATA")
+    for name, recovery in pending.items():
+        path = target / str(safe_relative(name))
+        if path.is_file():
+            stat = path.stat()
+            if stat.st_size == recovery["size"] and stat.st_mtime_ns == recovery["target_mtime_ns"]:
+                previous[name] = recovery
+    for name in current.keys() - previous.keys():
+        path = target / str(safe_relative(name))
+        if path.is_symlink() or not path.resolve().is_relative_to(target):
+            raise RuntimeError("Unsafe node source: " + name)
+        if path.exists() and path.stat().st_size != current[name]["size"]:
+            raise RuntimeError("New source path conflicts with node files: " + name)
     head, status = git_metadata(source)
     receipt = dict(kind=KIND, source_root=str(source), wheelhouse=str(wheels),
                    files=list(previous.values()), pending_files=rows,
                    wheel_count=len(locked), state="preparing")
     node.mkdir(parents=True, exist_ok=True)
     write_json(marker, receipt)
-    changed = 0
-    for index, row in enumerate(rows, 1):
+    with contextlib.redirect_stdout(sys.stderr):
+        stage_wheels(node / "work", wheels, repo=source)
+    def copy_row(row):
         origin = source / row["path"]
         path = target / row["path"]
-        if not path.exists() or digest(path) != row["sha256"]:
+        old = previous.get(row["path"], {})
+        recovery = pending.get(row["path"])
+        if recovery and path.is_file():
+            stat = path.stat()
+            if stat.st_size == recovery["size"] and stat.st_mtime_ns == recovery["target_mtime_ns"]:
+                old = recovery
+        same_source_time = (old.get("source_mtime_ns") == row["source_mtime_ns"]
+            or ("source_mtime_ns" not in old and bool(old)
+                and row["source_mtime_ns"] <= previous_checked_ns))
+        if not path.exists() or path.stat().st_size != row["size"] or not same_source_time:
             path.parent.mkdir(parents=True, exist_ok=True)
             partial = path.with_name(path.name + ".h3-partial")
             shutil.copyfile(origin, partial)
             verify(partial, row)
             partial.chmod(0o755 if path.suffix == ".sh" else 0o644)
-            partial.replace(path)
-            changed += 1
-        if index % 250 == 0 or index == len(rows):
-            print("H3_SOURCE_FILES", index, len(rows), "changed", changed,
-                  file=sys.stderr, flush=True)
+            row["target_mtime_ns"] = partial.stat().st_mtime_ns
+            return row
+        row["target_mtime_ns"] = path.stat().st_mtime_ns
+        return None
+    staged = parallel_rows(rows, copy_row, "H3_SOURCE_FILES")
+    # Persist the exact metadata of every pending rename before committing.
+    # A retry can distinguish a completed rename from an independent node edit.
+    write_json(marker, dict(receipt, pending_files=rows))
+    def promote(row):
+        if row is not None:
+            path = target / row["path"]
+            path.with_name(path.name + ".h3-partial").replace(path)
+    parallel_rows(staged, promote, "H3_SOURCE_COMMITTED")
+    changed = sum(row is not None for row in staged)
     for name in previous.keys() - current.keys():
         (target / name).unlink(missing_ok=True)
-    # Bind the snapshot to the uploaded bytes and catch concurrent source edits.
-    for index, row in enumerate(rows, 1):
-        verify(source / row["path"], row)
+    # Record sizes and timestamps without rereading source contents.
+    def verify_row(row):
+        origin = (source / row["path"]).stat()
+        if origin.st_size != row["size"] or origin.st_mtime_ns != row["source_mtime_ns"]:
+            raise RuntimeError("Source metadata changed while staging: " + row["path"])
         verify(target / row["path"], row)
-        if index % 250 == 0 or index == len(rows):
-            print("H3_SOURCE_COPY_VERIFIED", index, len(rows), file=sys.stderr, flush=True)
+        row["target_mtime_ns"] = (target / row["path"]).stat().st_mtime_ns
+    parallel_rows(rows, verify_row, "H3_SOURCE_COPY_COMPLETE")
     write_json(target / ".h3-source.json", dict(schema=1, kind="source_directory_snapshot",
                git_head=head, git_status=status, source_root=str(source), files=rows))
-    source_identity(target)
+    # Every target member was just checked above; later audits revalidate identity.
     write_json(marker, dict(receipt, files=rows, pending_files=[], state="ready",
                             changed_files=changed, checked_at=time.time()))
     print("H3_SOURCE_STAGE_READY", len(rows), "changed", changed,

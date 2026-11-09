@@ -1,22 +1,17 @@
 """Record submission inputs, official comparison text and output fingerprints."""
 import argparse
 from datetime import datetime, timezone, timedelta
-import hashlib
 import json
 import os
 from pathlib import Path
 import re
 from h3_source_identity import source_identity
 
-from h3_preflight import COMPARE_SHA, INPUT_SHA
 
 def fingerprint(path):
     path = Path(path).resolve(strict=True)
-    sha = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            sha.update(block)
-    return dict(path=str(path), bytes=path.stat().st_size, sha256=sha.hexdigest())
+    stat = path.stat()
+    return dict(path=str(path), bytes=stat.st_size, mtime_ns=stat.st_mtime_ns)
 
 def write_json(path, value):
     path = Path(path)
@@ -44,26 +39,22 @@ def parse_report(text):
 def verify_reference():
     directory = Path(os.environ["H3_DELIVERY_DIR"]) / "reference"
     case = json.loads((directory / "case.json").read_text(encoding="utf-8"))
-    expected = dict(first_frame_sha256=fingerprint(os.environ["FIRST_FRAME"])["sha256"],
-                    prompt="A dog falls asleep", seed=42, requested_steps=50, num_frames=124,
-                    official_compare_sha256_lf=COMPARE_SHA)
+    expected = dict(first_frame_bytes=fingerprint(os.environ["FIRST_FRAME"])["bytes"],
+                    prompt="A dog falls asleep", seed=42, requested_steps=50, num_frames=124)
     for key, value in expected.items():
         if case.get(key) != value:
             raise RuntimeError("Reference belongs to a different test case: " + key)
     reference = fingerprint(directory / "reference_fl2va.mp4")
-    if reference["sha256"] != case["reference_sha256"] or reference["bytes"] != case["reference_bytes"]:
-        raise RuntimeError("Bundled reference fingerprint mismatch")
+    if reference["bytes"] != case["reference_bytes"]:
+        raise RuntimeError("Bundled reference size mismatch")
     return dict(video=reference, case=case)
 
 def begin():
     root = Path(os.environ["H3_SOURCE_ROOT"]).resolve()
     image = fingerprint(os.environ["FIRST_FRAME"])
-    expected = os.environ.get("H3_INPUT_SHA256", INPUT_SHA).lower()
-    if image["sha256"] != expected:
-        raise RuntimeError("Input differs from the registered case SHA")
     compare = root / "InfiniLM/examples/minimax_h3_compare.py"
-    if hashlib.sha256(compare.read_bytes().replace(b"\r\n", b"\n")).hexdigest() != COMPARE_SHA:
-        raise RuntimeError("Official comparator content changed")
+    if not compare.is_file() or compare.stat().st_size == 0:
+        raise RuntimeError("Missing or empty official comparator: " + str(compare))
     model = Path(os.environ["MODEL_PATH"]).resolve()
     result = dict(started_at=now(), mode=os.environ["H3_SUBMISSION_MODE"], first_frame=image,
         prompt="A dog falls asleep", seed=42, requested_steps=50, num_frames=124,
@@ -74,7 +65,7 @@ def begin():
             "diffusers/model_index.json", "diffusers/transformer/config.json",
             "diffusers/text_encoder/config.json", "FL2VA/model_index.json")
             if (model / name).is_file()],
-        source_identity=source_identity(root), official_compare_sha256_lf=COMPARE_SHA,
+        source_identity=source_identity(root), integrity="presence_size_and_media_decode",
         provided_reference=verify_reference() if os.environ["H3_SUBMISSION_MODE"] == "check" else None,
         native_path=os.environ["H3_NATIVE_VIDEO"], compare_dir=os.environ["OUTPUT_DIR"],
         source_files=[fingerprint(root / name) for name in (

@@ -50,9 +50,9 @@ worker() (
     env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u "$TOOLS/h3_bootstrap.py" \
         stage-wheels --work "$H3_REPRO_WORK" --wheelhouse "$H3_WHEELHOUSE"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" prepare
+    export H3_BUILD_AUDIT_OUTPUT="$H3_RUN_DIR/origins.json"
     bash --noprofile --norc "$TOOLS/reproduce_h3.sh" build
     source "$TOOLS/h3_repro_env.sh"
-    python -u "$TOOLS/h3_bootstrap.py" audit --work "$H3_REPRO_WORK" --output "$H3_RUN_DIR/origins.json"
     python -u "$TOOLS/h3_submission_record.py" begin
     python -u "$TOOLS/h3_preflight.py" --source-root "$H3_SOURCE_ROOT" \
         --model-path "$MODEL_PATH" --first-frame "$FIRST_FRAME" --output "$H3_RUN_DIR/preflight.json"

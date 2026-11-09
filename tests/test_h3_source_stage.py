@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import h3_source_stage as stage
 from h3_delivery import file_row
-from h3_source_identity import digest, source_identity
+from h3_source_identity import source_identity
+
+def digest(path):
+    return Path(path).read_bytes()
+
 
 
 class SourceStageTests(unittest.TestCase):
@@ -37,7 +41,7 @@ class SourceStageTests(unittest.TestCase):
         self.wheels.mkdir()
         wheel = self.wheels / "a.whl"
         wheel.write_bytes(b"wheel")
-        row = dict(filename="a.whl", size=5, sha256=digest(wheel))
+        row = dict(filename="a.whl", size=5, sha256="historical-record-ignored")
         self.put("requirements/h3_linux_cp311.lock.json", json.dumps({"wheels": [row]}).encode())
         self.env = patch.dict(os.environ, {"IFAB_AFS_HOME": str(self.afs)})
         self.env.start()
@@ -63,6 +67,100 @@ class SourceStageTests(unittest.TestCase):
         self.assertFalse((self.repo / ".h3-source.json").exists())
         self.assertEqual(json.loads((self.node / "source-stage.json").read_text())["state"], "ready")
 
+    def make_wheel_zip(self):
+        import zipfile
+        archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+            bundle.writestr("offline-wheels/a.whl", b"wheel")
+        return archive
+
+    def test_zip_is_automatically_extracted_on_node_without_afs_expansion(self):
+        self.make_wheel_zip()
+        shutil.rmtree(self.wheels)
+        self.run_stage()
+        installed = self.node / "work/downloads/a.whl"
+        self.assertEqual(installed.read_bytes(), b"wheel")
+        self.assertFalse(self.wheels.exists())
+        before = installed.stat().st_mtime_ns
+        with patch.object(stage, "stage_wheels", wraps=stage.stage_wheels):
+            self.run_stage()
+        self.assertEqual(installed.stat().st_mtime_ns, before)
+
+    def test_zip_works_with_readme_only_wheel_directory_from_checkout(self):
+        self.make_wheel_zip()
+        (self.wheels / "a.whl").unlink()
+        (self.wheels / "README.md").write_text("Source checkout placeholder")
+        self.run_stage()
+        self.assertEqual((self.node / "work/downloads/a.whl").read_bytes(), b"wheel")
+        self.assertFalse((self.wheels / "a.whl").exists())
+
+    def test_zip_root_entry_forwards_extracted_wheels_to_worker(self):
+        self.install_launcher()
+        self.make_wheel_zip()
+        shutil.rmtree(self.wheels)
+        result = self.launch(self.repo, extra=dict(H3_NODE_ROOT=self.node.as_posix()))
+        data = self.worker_env(result)
+        self.assertEqual(Path(data["wheels"]), self.node / "work/downloads")
+        self.assertFalse(self.wheels.exists())
+
+    def test_zip_missing_or_unsafe_members_fail_before_node_creation(self):
+        import zipfile
+        archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
+        shutil.rmtree(self.wheels)
+        for entries in ({}, {"offline-wheels/a.whl": b"shorter"},
+                        {"offline-wheels/a.whl": b"wheel", "../escape": b"bad"}):
+            with self.subTest(entries=entries):
+                with zipfile.ZipFile(archive, "w") as bundle:
+                    for name, value in entries.items():
+                        bundle.writestr(name, value)
+                with self.assertRaises(RuntimeError):
+                    self.run_stage()
+                self.assertFalse(self.node.exists())
+
+    def test_zip_crc_failure_leaves_no_promoted_wheel(self):
+        import zipfile
+        archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_STORED) as bundle:
+            bundle.writestr("offline-wheels/a.whl", b"wheel")
+        with zipfile.ZipFile(archive) as bundle:
+            member = bundle.infolist()[0]
+            offset = member.header_offset + 30 + len(member.filename.encode()) + len(member.extra)
+        blob = bytearray(archive.read_bytes())
+        blob[offset] ^= 1
+        archive.write_bytes(blob)
+        shutil.rmtree(self.wheels)
+        with self.assertRaises(zipfile.BadZipFile):
+            self.run_stage()
+        self.assertFalse((self.node / "work/downloads/a.whl").exists())
+
+    def test_legacy_stage_receipt_preserves_unchanged_objects_and_sources(self):
+        self.run_stage()
+        marker = self.node / "source-stage.json"
+        receipt = json.loads(marker.read_text())
+        for row in receipt["files"]:
+            row.pop("source_mtime_ns")
+            row.pop("target_mtime_ns")
+            row["sha256"] = "historical-record-ignored"
+        marker.write_text(json.dumps(receipt))
+        cpp = self.node / "source/InfiniCore/operator.cpp"
+        before = cpp.stat().st_mtime_ns
+        self.run_stage()
+        self.assertEqual(cpp.stat().st_mtime_ns, before)
+        self.assertEqual(json.loads(marker.read_text())["changed_files"], 0)
+
+    def test_source_copy_does_not_call_sha256(self):
+        import hashlib
+        with patch.object(hashlib, "sha256", side_effect=AssertionError("SHA256 called")):
+            self.run_stage()
+            self.assertEqual(source_identity(self.node / "source")["integrity"], "presence_and_size")
+
+    def test_same_size_source_update_uses_timestamp(self):
+        self.run_stage()
+        origin = self.put("InfiniCore/operator.cpp", b"new-code")
+        os.utime(origin, ns=(2_000_000_000, 2_000_000_000))
+        self.run_stage()
+        self.assertEqual((self.node / "source/InfiniCore/operator.cpp").read_bytes(), b"new-code")
+
     def test_no_changes_preserve_source_and_object_mtimes(self):
         self.run_stage()
         cpp = self.node / "source/InfiniCore/operator.cpp"
@@ -79,6 +177,10 @@ class SourceStageTests(unittest.TestCase):
         cpp = self.node / "source/InfiniCore/operator.cpp"
         untouched = self.node / "source/InfiniLM/xmake.lua"
         os.utime(cpp, (946684800, 946684800))
+        marker = self.node / "source-stage.json"
+        receipt = json.loads(marker.read_text())
+        next(r for r in receipt["files"] if r["path"] == "InfiniCore/operator.cpp")["target_mtime_ns"] = cpp.stat().st_mtime_ns
+        marker.write_text(json.dumps(receipt))
         before = untouched.stat().st_mtime_ns
         origin = self.put("InfiniCore/operator.cpp", b"optimized")
         os.utime(origin, (946684800, 946684800))
@@ -89,13 +191,13 @@ class SourceStageTests(unittest.TestCase):
 
     def test_missing_or_corrupt_wheel_fails_before_node_creation(self):
         wheel = self.wheels / "a.whl"
-        for data in (b"wrong", None):
+        for data in (b"shorter", None):
             with self.subTest(data=data):
                 if data is None:
                     wheel.unlink()
                 else:
                     wheel.write_bytes(data)
-                with self.assertRaisesRegex(RuntimeError, "Missing/corrupt"):
+                with self.assertRaisesRegex(RuntimeError, "Missing/wrong-size"):
                     self.run_stage()
                 self.assertFalse(self.node.exists())
 
@@ -140,6 +242,26 @@ class SourceStageTests(unittest.TestCase):
                 self.run_stage()
         self.run_stage()
         self.assertEqual((self.node / "source/InfiniCore/operator.cpp").read_bytes(), b"baseline")
+
+    def test_interrupted_incremental_promotion_resumes_without_recopy(self):
+        self.run_stage()
+        self.put("InfiniCore/operator.cpp", b"updated-code")
+        self.put("InfiniLM/xmake.lua", b"updated-lua")
+        replace = Path.replace
+        failed = False
+        def interrupt(path, target):
+            nonlocal failed
+            if str(path).endswith("xmake.lua.h3-partial") and not failed:
+                failed = True
+                raise OSError("promotion interrupted")
+            return replace(path, target)
+        with patch.object(Path, "replace", interrupt):
+            with self.assertRaisesRegex(OSError, "promotion interrupted"):
+                self.run_stage()
+        self.run_stage()
+        self.assertEqual((self.node / "source/InfiniCore/operator.cpp").read_bytes(), b"updated-code")
+        self.assertEqual((self.node / "source/InfiniLM/xmake.lua").read_bytes(), b"updated-lua")
+        self.assertEqual(json.loads((self.node / "source-stage.json").read_text())["state"], "ready")
 
     def test_afs_workspace_and_unowned_node_directories_are_rejected(self):
         for node in (self.afs / "node", self.root / "workspace/node", self.root):
@@ -206,7 +328,7 @@ WORKER_PY
                 result = self.launch(self.repo, args, dict(H3_NODE_ROOT=self.node.as_posix()))
                 data = self.worker_env(result)
                 self.assertEqual(data["mode"], mode)
-                self.assertEqual(Path(data["wheels"]), self.wheels)
+                self.assertEqual(Path(data["wheels"]), self.node / "work/downloads")
                 self.assertFalse((self.repo / "delivery-manifest.json").exists())
                 self.assertIsNone(data["snapshot"])
 

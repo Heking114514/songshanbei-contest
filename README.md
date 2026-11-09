@@ -1,78 +1,75 @@
 # songshanbei-contest
 
-更新时间：2026-11-09T01:19:29+08:00（北京时间）。
+更新时间：2026-11-09T11:12:27+08:00（北京时间）。
 
 ## 嵩山杯 MiniMax-H3 FL2VA 初赛
 
-统一输入图片：`inputs/first_frame.png`
+统一首帧：`inputs/first_frame.png`
 
 统一 FL2VA Prompt：`A dog falls asleep`
 
-### 复现指令
+### 复现：上传源码和 ZIP，一行启动
 
-1. **上传源码。** 将本仓库源码上传到个人 AFS 根目录，目录统一命名为 `songshanbei-contest/`；该目录内直接包含 `run_submission.sh`、`InfiniCore/` 和 `InfiniLM/`。
-2. **放入依赖。** 将 **55 个 wheel 文件**原名放入仓库内的 `offline-wheels/`。三份工具、输入图和参考视频已随仓库提供。获取方法见 [离线依赖说明](PACKAGING.md)；当前尚未发布配套 Release。
-3. **申请独占 8 卡。** 打开新 Bash，**就在终端初始目录直接粘贴下面一行，无需先进入 AFS**：
+1. 将本仓库源码上传到个人 AFS 根目录，目录命名为 **`songshanbei-contest/`**。目录内应直接有 `run_submission.sh`、`InfiniCore/`、`InfiniLM/`，源码需是展开的文件夹。
+2. 从[离线依赖 Release](https://github.com/Heking114514/songshanbei-contest/releases/tag/offline-wheel)下载 **`h3-offline-wheels-linux-cp311.zip`**，放到上述目录，**与 `run_submission.sh` 同级，保持原名，无需手工解压**。依赖获取说明见 [PACKAGING.md](PACKAGING.md)；仓库本身不包含这个 ZIP。
+3. 申请独占 8 卡，打开新 Bash，**在终端初始目录直接粘贴**：
 
 ~~~bash
 bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ~~~
 
-脚本自动选择节点工作目录，安装环境、以 `-j120` 编译 H3 所需目标，完整生成视频并保存到 AFS。进度实时打印，启动时显示环境和结果目录。
+**启动后无需人工解压、安装、切换环境或分步编译。** 脚本自动完成：检查文件完整性 → 把源码复制到节点盘 → 把依赖 ZIP 解压到节点盘 → 安装 Python 依赖与解包工具链 → `-j120` 编译 → 完整 8 卡推理 → 把视频和日志保存到个人 AFS。进度实时打印，错误会停止后续步骤并输出原因。无需计算或填写 SHA256。
 
-需要本次生成后运行官方比较，改用：
-
-~~~bash
-bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
-~~~
-
-两种方式选一种。`check` 使用本次新生成视频，与随仓库提供的 `reference/reference_fl2va.mp4` 比较，参考视频直接复用。
-
-**如果习惯先进入源码目录，也可以从新终端初始目录执行：**
-
-~~~bash
-cd "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest"
-bash run_submission.sh
-~~~
-
-需要比较时，把最后一行改为 `bash run_submission.sh check`。
-
-### 文件怎么放
+### 文件必须这样放
 
 ~~~text
 个人AFS/
 └── songshanbei-contest/
     ├── run_submission.sh
+    ├── h3-offline-wheels-linux-cp311.zip   # 另行下载，原名放这里，不解压
     ├── InfiniCore/
     ├── InfiniLM/
     ├── ninetoothed/
     ├── scripts/
     ├── requirements/
-    ├── third_party/h3/             # 仓库已带三份工具
-    ├── offline-wheels/             # 放入55个wheel，约183MiB
-    ├── inputs/first_frame.png
-    └── reference/                  # 仓库已带参考视频及用例登记
+    ├── third_party/h3/                    # 仓库自带4份工具
+    ├── inputs/first_frame.png             # 仓库自带首帧
+    └── reference/                        # 仓库自带参考视频和case.json
 ~~~
+
+ZIP 内为 `offline-wheels/` 目录及 55 个 wheel，脚本直接解压到**节点**的 `work/downloads/`，不会在 AFS 展开一份依赖。也兼容已解压的 `songshanbei-contest/offline-wheels/*.whl`；两种方式选一种即可，同时存在且目录中有wheel时优先使用该目录；只有README的目录不影响ZIP识别。请勿把 ZIP 放在 `offline-wheels/` 内。
+
+### 需要官方比较时
+
+把启动命令加上 `check`：
+
+~~~bash
+bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh" check
+~~~
+
+`check` 会完成本次完整推理，再与 `reference/reference_fl2va.mp4` 调用原版官方比较器。参考视频直接复用；默认不加 `check` 时只生成和保存视频。两条命令选一条运行。
 
 ### 结果从哪里拿
 
-每次运行自动保存到 **`个人AFS/h3-results/run-时间戳-进程号/`**。启动和结束时都会打印完整路径，到平台 AFS 文件管理中打开该目录下载。
+每次自动保存到 **`个人AFS/h3-results/run-时间戳-进程号/`**，终端显示完整路径。到 AFS 文件管理中打开该目录下载：
 
-| 内容 | 本次结果目录内的路径 |
+| 内容 | 本次结果目录内的文件 |
 |---|---|
 | 生成的视频 | `result.mp4` |
 | 推理日志 | `generation.log` |
-| 环境、编译及推理总日志 | `workflow.log` |
-| 输入与生成参数 | `invocation.json` |
-| 视频规格与指纹 | `native-check.json` |
-| 运行状态与保存清单 | `submission-status.json`、`saved-manifest.json` |
-| 官方比较原文，仅check模式 | `compare/compare.log` |
-| 比较检查结果，仅check模式 | `evaluation.json` |
+| 环境、编译和推理总日志 | `workflow.log` |
+| 输入与完整生成参数 | `invocation.json` |
+| 视频规格与文件记录 | `native-check.json` |
+| 运行状态、保存清单 | `submission-status.json`、`saved-manifest.json` |
+| 官方比较原文，仅 check | `compare/compare.log` |
+| 比较检查结果，仅 check | `evaluation.json` |
 
-退出 0，末行 `pipeline_rc=0`、`save_rc=0`，且 AFS 中存在视频和保存清单，表示生成及保存成功。
+退出 0、末行 `pipeline_rc=0 save_rc=0`，且 AFS 中存在 `result.mp4` 和 `saved-manifest.json`，表示生成与保存成功。终端中的节点临时目录不是最终取视频的位置。
 
-### 环境在哪里
+### 环境和增量复用
 
-源码和 wheel 保留在 AFS；脚本在当前节点初始 `workspace` 的同级目录自动创建 `h3-native-编号/`。其中 `source/` 保存源码和编译对象，`work/` 保存依赖、工具链和原生库。相同节点、相同 AFS 源码目录重复运行会复用环境和增量编译产物。
+平台需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享模型。默认模型目录为 `/public/home/aclsylqidf/shared/MiniMax-H3`，源码、工具、首帧与参考视频由仓库提供，55 个普通 wheel 由 ZIP 提供。
 
-以上命令适用于赛事海光 8 卡环境：平台提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936，默认共享模型为 `/public/home/aclsylqidf/shared/MiniMax-H3`。平台环境不同时的可选配置及换图方法见 [REPRODUCE.md](REPRODUCE.md)，详细目录见 [ENVIRONMENT.md](ENVIRONMENT.md)。
+脚本在节点初始 `workspace` 的同级自动创建 `h3-native-编号/`：`source/` 保存源码和编译对象，`work/` 保存环境和解压依赖。同节点重试复用环境及未变化的编译对象；节点回收后，下次新节点重新构建。AFS 内的源码、ZIP和已保存视频保留。依赖只解压到节点，不额外占用AFS展开空间；AFS仍需有保存本次结果的空间。
+
+标准参数为完整层数、8卡、seed42、50步请求、124帧。更换首帧及模型路径等可选设置见 [REPRODUCE.md](REPRODUCE.md)，完整目录见 [ENVIRONMENT.md](ENVIRONMENT.md)。

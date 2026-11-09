@@ -2,15 +2,16 @@
 
 更新时间：2026-11-08T12:33:23+08:00（北京时间）。
 
-本目录随源码交付目标平台的固定依赖；不包含 H3 原生扩展、权重、旧 JIT 或个人 venv。文件大小及 SHA 以 [manifest.json](manifest.json) 为准，bootstrap 安装前逐项核验。本提交随附这三份固定资产；新环境实际执行摘要见[验收记录](../../results/h3_reproduction_20261108.json)。
+本目录随源码交付目标平台的固定依赖；不包含 H3 原生扩展、权重、旧 JIT 或个人 venv。文件大小以 [manifest.json](manifest.json) 为准，bootstrap 安装前只核对存在性和大小；历史SHA作为来源记录，不参与运行校验。本提交随附这四份固定资产；新环境实际执行摘要见[验收记录](../../results/h3_reproduction_20261108.json)。
 
 | 文件 | 字节数 | 用途 |
 |---|---:|---|
 | flagtree-0.7.0+hcu3.6-cp311-cp311-linux_x86_64.whl | 72231003 | CPython3.11/Linux x86_64 的 HCU Triton3.6 编译器/运行时 |
 | hcu-jit-clang18-minimal.tar.gz | 74463838 | clang-18、lld 与相对链接，用平台 DTK 提供 ROCm 支持 |
-| xmake-v3.0.3.gz.run | 3030123 | xmake3.0.3 源码自解压包，由节点 make -j120 构建 |
+| xmake-v3.0.3.gz.run | 3030123 | xmake3.0.3 源码回退包 |
+| xmake-bundle-v3.0.3.linux.x86_64 | 2761352 | 官方自包含工具，优先直接运行，启动时检查大小和可运行版本 |
 
-三份资产合计 149724964 字节。现有 wheel 来自此前完成的 HCU 构建；本轮已在新Python目录导入，并完成首次JIT及八卡短推理；这不等于完整官方compare或任意新shape已验收。不能用 PyPI Triton 或另一 Python/DTK 版本的 wheel 随意替代。
+四份资产合计 152486316 字节。现有 wheel 来自此前完成的 HCU 构建；本轮已在新Python目录导入，并完成首次JIT及八卡短推理；这不等于完整官方compare或任意新shape已验收。不能用 PyPI Triton 或另一 Python/DTK 版本的 wheel 随意替代。
 
 ## FlagTree 来源与补丁
 
@@ -38,6 +39,8 @@ manifest 逐个固定 clang-18/lld 二进制 SHA。编译器版本来源以该�
 
 来源：[官方 v3.0.3 Release](https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-v3.0.3.gz.run)。本地 SHA 与发布 digest 已核对：
 `50842cf3a77436bc97fccc7c74935a0ed002bc44afa69cf05fb2b5b8463279d9`。
-许可见 [LICENSE.xmake](LICENSE.xmake)，取自相同 tag。本轮已在节点从该源码包执行解包、configure、make/install并验证版本；默认安装到节点work。它是工具依赖，H3原生对象仍从本轮源码首次构建。
+许可见 [LICENSE.xmake](LICENSE.xmake)，取自相同 tag。此前已在节点从该源码包执行解包、configure、make/install并验证版本。当前优先把官方自包含bundle复制到节点work/xmake/bin/xmake，检查版本和show --help；不能运行时自动回退上述源码构建。bundle已按官方Release digest校验，本轮新节点兼容性仍待实测。它是工具依赖，H3原生对象仍从本轮源码首次构建。
 
 Python 第三方 wheel 的固定来源和各自 metadata 见 [依赖锁](../../requirements/h3_linux_cp311.lock.json)；安装包保留其许可元数据。
+
+官方bundle来源：[v3.0.3 Linux x86_64](https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-bundle-v3.0.3.linux.x86_64)，SHA256：`cf4def6e60db1b35d1af4c0064abb069b4b89d90aea3d57b551ef4c697141190`。这只是构建工具，InfiniCore/InfiniLM原生对象仍从源码编译。

@@ -1,10 +1,10 @@
 # MiniMax-H3 FL2VA 运行说明
 
-更新时间：2026-11-09T01:19:29+08:00（北京时间）。
+更新时间：2026-11-09T11:12:27+08:00（北京时间）。
 
 ## 放文件
 
-上传本仓库到 `个人AFS/songshanbei-contest/`，将依赖锁中的 55 个 wheel 原名放到其 `offline-wheels/`。三份工具、输入图和参考视频已随仓库提供。获取和核验依赖见 [PACKAGING.md](PACKAGING.md)。
+上传本仓库到 `个人AFS/songshanbei-contest/`，将 `h3-offline-wheels-linux-cp311.zip` 原名放到仓库根目录，与 `run_submission.sh` 同级，无需手工解压。四份工具、输入图和参考视频已随仓库提供。获取和核验依赖见 [PACKAGING.md](PACKAGING.md)。
 
 ## 一行启动
 
@@ -29,7 +29,7 @@ bash run_submission.sh
 
 在仓库内需要比较时执行 `bash run_submission.sh check`。脚本从当前或前一个目录识别本节点workspace，自动选择其同级工作目录；若先切换过多个目录，推荐重新打开Bash后使用一行启动命令。
 
-默认流程为：核验离线输入 → 同步节点源码 → 安装环境 → -j120编译 → 完整生成 → AFS保存。参数保持8卡、完整层数、seed42、50步请求、124帧、Prompt为 `A dog falls asleep`。check在生成完成后调用原版官方比较器，复用已有参考视频。
+默认流程为：核验离线输入 → 同步节点源码 → 自动解压wheel ZIP到节点盘 → 安装环境 → -j120编译 → 完整生成 → AFS保存。参数保持8卡、完整层数、seed42、50步请求、124帧、Prompt为 `A dog falls asleep`。check在生成完成后调用原版官方比较器，复用已有参考视频。
 
 ## 拿结果
 
@@ -44,7 +44,7 @@ bash run_submission.sh
 | 设置 | 默认值 |
 |---|---|
 | 个人AFS根 | 平台IFAB_AFS_HOME，未设置时使用HOME |
-| 源码及wheel | 启动脚本所在目录及其offline-wheels/ |
+| 源码及依赖 | 启动脚本所在目录及同级h3-offline-wheels-linux-cp311.zip；兼容offline-wheels/ |
 | 节点环境 | 当前或前一个workspace的同级h3-native-编号/ |
 | 共享模型 | /public/home/aclsylqidf/shared/MiniMax-H3 |
 | 编译并行数 | 120 |
@@ -63,11 +63,14 @@ bash run_submission.sh
 
 ## 更换测试图片
 
-运行前指定新图片及其SHA256：
+运行前指定新图片，文件需存在且能解码：
 
 ~~~bash
 export FIRST_FRAME="${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/inputs/new_frame.png"
-export H3_INPUT_SHA256=替换为新图片的64位SHA256
 ~~~
 
-可用 `sha256sum inputs/new_frame.png` 获取校验值。Prompt当前固定，其他参数如上。check还需更新 `reference/reference_fl2va.mp4` 和 `reference/case.json`，绑定新图片及新参考视频。登记字段见 [reference说明](reference/README.md)，不能用旧参考视频比较新图片。
+无需计算或填写 SHA256。Prompt当前固定，其他参数如上。check还需更新 `reference/reference_fl2va.mp4` 和 `reference/case.json`，绑定新图片及新参考视频。登记字段见 [reference说明](reference/README.md)，不能用旧参考视频比较新图片。
+
+运行过程仅执行存在、大小、归档可解压和媒体可解码检查，不执行SHA256校验。增量同步采用大小与mtime，未变化的源码和编译对象不重写。
+
+推荐上传原名ZIP；不需要额外解压命令。已有offline-wheels/目录也可继续使用，两种格式选一种；同时存在且目录中有wheel时优先目录。ZIP和源码留在AFS，解压后的依赖及编译对象仅在节点盘。

@@ -65,7 +65,7 @@ configure_component() {
     if [ -n "${H3_CONFIG_CACHE:-}" ]; then
         mkdir -p "$H3_CONFIG_CACHE"
         key="$("$PYTHON" "$REPO_ROOT/scripts/h3_bootstrap.py" config-key "$component")"
-        marker="$H3_CONFIG_CACHE/$component.sha256"
+        marker="$H3_CONFIG_CACHE/$component.json"
         if [ -f "$marker" ] && [ "$(cat "$marker")" = "$key" ] \
             && [ -s .xmake/linux/x86_64/xmake.conf ]; then
             printf '[configure] unchanged %s; reuse existing xmake configuration\n' "$component"

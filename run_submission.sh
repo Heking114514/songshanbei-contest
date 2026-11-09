@@ -22,6 +22,8 @@ if [ -n "${H3_NODE_ROOT:-}" ]; then stage_args+=(--node "$H3_NODE_ROOT"); fi
 H3_NODE_ROOT="$(env -u PYTHONPATH -u PYTHONHOME "$H3_BASE_PYTHON" -u \
     "$H3_DELIVERY_DIR/scripts/h3_source_stage.py" "${stage_args[@]}")"
 export H3_NODE_ROOT
+# Both ZIP and directory inputs are staged exactly once on node storage.
+export H3_WHEELHOUSE="$H3_NODE_ROOT/work/downloads"
 printf 'H3_SOURCE_DIR=%s\nH3_NODE_ROOT=%s\nH3_AFS_OUTPUT_DIR=%s\n' \
     "$H3_DELIVERY_DIR" "$H3_NODE_ROOT" "$H3_AFS_OUTPUT_DIR"
 exec bash --noprofile --norc "$H3_NODE_ROOT/source/scripts/h3_submission_common.sh" "$mode"

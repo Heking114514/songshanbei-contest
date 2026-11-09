@@ -32,7 +32,7 @@ worker() {
             export BUILD_SKIP_CONFIGURE=0 BUILD_VERBOSE=1
             bash --noprofile --norc "$TOOLS/build_hygon.sh"
             python -u "$TOOLS/h3_bootstrap.py" audit --work "$H3_REPRO_WORK" \
-                --output "$H3_REPRO_WORK/reports/build-origins.json"
+                --output "${H3_BUILD_AUDIT_OUTPUT:-$H3_REPRO_WORK/reports/build-origins.json}"
             ;;
         jit)
             export H3_FORBID_JIT_COMPILATION=0

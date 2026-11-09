@@ -22,6 +22,11 @@
       "path": "third_party/h3/xmake-v3.0.3.gz.run",
       "size": 3030123,
       "sha256": "50842cf3a77436bc97fccc7c74935a0ed002bc44afa69cf05fb2b5b8463279d9"
+    },
+    {
+      "path": "third_party/h3/xmake-bundle-v3.0.3.linux.x86_64",
+      "size": 2761352,
+      "sha256": "cf4def6e60db1b35d1af4c0064abb069b4b89d90aea3d57b551ef4c697141190"
     }
   ],
   "flagtree": {
@@ -52,10 +57,16 @@
       "clang-18": "be99756419949da6fecb431bbd0309b29e5efacf55120f997074ef48766e7b43",
       "lld": "f2591ae2ae45bfe8d10c3c1cac1340e24ca5776dd131ec67f841a0d0787e78f3"
     },
-    "note": "Archive differs from historical AFS ready archive; both compiler binaries match. Fresh JIT required for this reproduction."
+    "note": "Archive differs from historical AFS ready archive; both compiler binaries match. Fresh JIT required for this reproduction.",
+    "binary_sizes": {
+      "clang-18": 158257584,
+      "lld": 89999744
+    }
   },
   "xmake": {
     "version": "3.0.3",
-    "url": "https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-v3.0.3.gz.run"
+    "url": "https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-v3.0.3.gz.run",
+    "bundle_path": "third_party/h3/xmake-bundle-v3.0.3.linux.x86_64",
+    "bundle_url": "https://github.com/xmake-io/xmake/releases/download/v3.0.3/xmake-bundle-v3.0.3.linux.x86_64"
   }
 }

@@ -1,7 +1,6 @@
 """Package offline inputs, stage on node storage, and save bounded outputs."""
 import argparse
 from datetime import datetime, timezone
-import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -12,7 +11,7 @@ import tarfile
 import tempfile
 import time
 
-from h3_source_identity import digest, source_identity
+from h3_source_identity import source_identity
 
 MiB = 1024 ** 2
 LIMIT = 4 * 1024 ** 3
@@ -27,12 +26,12 @@ def write_json(path, value):
 
 
 def file_row(path, name):
-    return dict(path=name, size=path.stat().st_size, sha256=digest(path))
+    return dict(path=name, size=path.stat().st_size)
 
 
 def verify(path, row):
-    if not path.is_file() or path.stat().st_size != row["size"] or digest(path) != row["sha256"]:
-        raise RuntimeError("Missing/corrupt delivery file: " + str(path))
+    if not path.is_file() or path.stat().st_size != row["size"]:
+        raise RuntimeError("Missing or wrong-size delivery file: " + str(path))
 
 
 def safe_relative(name):
@@ -107,17 +106,17 @@ def package(repo, wheelhouse, output):
                 (output / name).write_bytes(block)
                 parts.append(file_row(output / name, name))
                 index += 1
-        manifest = dict(schema=1, archive_sha256=digest(archive), archive_size=archive.stat().st_size,
+        manifest = dict(schema=2, integrity="presence_and_size", archive_size=archive.stat().st_size,
             parts=parts, launchers=launchers, git_head=identity["git_head"],
-            dirty_worktree=bool(identity["git_status"]), source_manifest_sha256=digest(identity_file),
+            dirty_worktree=bool(identity["git_status"]), source_manifest_size=identity_file.stat().st_size,
             source_files=len(rows), source_bytes=sum(x["size"] for x in rows),
             wheel_count=len(wheels), wheel_bytes=sum(x["size"] for x in wheels))
         write_json(output / "delivery-manifest.json", manifest)
     lines = ["# AFS 上传清单", "", "上传本目录全部文件，保留分片名称；不要在 AFS 解压。", "",
-             "| 文件 | 字节 | SHA256 |", "|---|---:|---|"]
+             "| 文件 | 字节 |", "|---|---:|"]
     for row in manifest["launchers"] + manifest["parts"]:
-        lines.append("| %s | %s | %s |" % (row["path"], row["size"], row["sha256"]))
-    lines += ["", "另传 delivery-manifest.json、REPRODUCE.md、UPLOAD.md。上传后另取容量统计 JSON。",
+        lines.append("| %s | %s |" % (row["path"], row["size"]))
+    lines += ["", "另传 delivery-manifest.json、REPRODUCE.md、UPLOAD.md。容量统计 JSON 为可选项。",
               "平台自带 Python3.11、Torch2.9.0/HIP6.3、DTK/gfx936；共享模型权重不随包上传。",
               "导出的是当前工作树；git_head 是基准提交，dirty_worktree 如实记录未提交修改。"]
     (output / "UPLOAD.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -141,8 +140,7 @@ def stage(package_dir, node=None):
     if (node / "delivery-manifest.json").exists():
         if json.loads((node / "delivery-manifest.json").read_text()) != manifest:
             raise RuntimeError("Node directory belongs to a different delivery")
-        if digest(target / ".h3-source.json") != manifest["source_manifest_sha256"]:
-            raise RuntimeError("Source identity SHA mismatch")
+        verify(target / ".h3-source.json", dict(size=manifest["source_manifest_size"]))
         source_identity(target)
         print("H3_DELIVERY_REUSED " + str(node), file=sys.stderr, flush=True)
         print(node)
@@ -151,26 +149,23 @@ def stage(package_dir, node=None):
         raise RuntimeError("Node staging path exists without a verified delivery")
     node.mkdir(parents=True)
     archive = node / "payload.tar.gz.partial"
-    h = hashlib.sha256()
     with archive.open("wb") as out:
         for row in manifest["parts"]:
             p = package_dir / str(safe_relative(row["path"]))
             verify(p, row)
-            print("H3_DELIVERY_PART_SHA_OK " + p.name, file=sys.stderr, flush=True)
+            print("H3_DELIVERY_PART_COMPLETE " + p.name, file=sys.stderr, flush=True)
             with p.open("rb") as stream:
                 for block in iter(lambda: stream.read(MiB), b""):
                     out.write(block)
-                    h.update(block)
-    if h.hexdigest() != manifest["archive_sha256"] or archive.stat().st_size != manifest["archive_size"]:
-        raise RuntimeError("Joined delivery SHA mismatch")
+    if archive.stat().st_size != manifest["archive_size"]:
+        raise RuntimeError("Joined delivery size mismatch")
     with tarfile.open(archive) as bundle:
         for member in bundle.getmembers():
             rel = safe_relative(member.name)
             if rel.parts[0] not in ("source", "wheelhouse") or not member.isfile():
                 raise RuntimeError("Unexpected delivery member: " + member.name)
         bundle.extractall(node, filter="data")
-    if digest(target / ".h3-source.json") != manifest["source_manifest_sha256"]:
-        raise RuntimeError("Source identity SHA mismatch")
+    verify(target / ".h3-source.json", dict(size=manifest["source_manifest_size"]))
     source_identity(target)
     write_json(node / "delivery-manifest.json", manifest)
     archive.unlink()

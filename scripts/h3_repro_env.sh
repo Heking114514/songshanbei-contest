@@ -14,10 +14,14 @@ export H3_PYTHON="$VIRTUAL_ENV/bin/python3"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 unset PYTHONHOME
 export PYTHONPATH="$H3_REPRO_WORK/python:$H3_SOURCE_ROOT/InfiniCore/python:$H3_SOURCE_ROOT/InfiniLM/python:$H3_SOURCE_ROOT/ninetoothed/src:$H3_SOURCE_ROOT/scripts"
-H3_TORCH_LIB="$(python -c 'from pathlib import Path; import torch; print(Path(torch.__file__).parent/"lib")')"
+H3_TORCH_LIB="$(python -c 'import json,os; from pathlib import Path; p=Path(os.environ["H3_REPRO_WORK"])/"prepared.json"; print(Path(json.loads(p.read_text())["platform"]["torch_path"]).parent/"lib")')"
 export LD_LIBRARY_PATH="$INFINI_ROOT/lib:$H3_TORCH_LIB:$DTK_ROOT/lib:$DTK_ROOT/lib64:$HYGON_CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 unset H3_TORCH_LIB
-export XMAKE_PROGRAM_DIR="$H3_REPRO_WORK/xmake/share/xmake"
+if [ -d "$H3_REPRO_WORK/xmake/share/xmake" ]; then
+    export XMAKE_PROGRAM_DIR="$H3_REPRO_WORK/xmake/share/xmake"
+else
+    unset XMAKE_PROGRAM_DIR
+fi
 export XMAKE_GLOBALDIR="$H3_REPRO_WORK/xmake-global"
 export H3_CONFIG_CACHE="$H3_REPRO_WORK/config"
 export TMPDIR="$H3_REPRO_WORK/tmp" TRITON_HOME="$H3_REPRO_WORK/triton"

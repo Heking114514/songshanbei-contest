@@ -20,5 +20,7 @@
     "attention": "math_bf16",
     "reference_max_heads": 4
   },
-  "note": "Historical full reference; generated once using the official legacy backend. Reused for this case only."
+  "note": "Historical full reference; generated once using the official legacy backend. Reused for this case only.",
+  "first_frame_bytes": 1393139,
+  "integrity": "presence_size_and_media_decode"
 }
