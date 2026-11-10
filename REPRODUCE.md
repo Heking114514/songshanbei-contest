@@ -1,8 +1,8 @@
 # MiniMax-H3 技术补充
 
-更新时间：2026-11-10T04:43:40+08:00（北京时间）。
+更新时间：2026-11-10T10:39:38+08:00（北京时间）。
 
-下载、上传、启动与取视频统一见 [README](README.md)。本地整改计算代码已保存为 `4f1ebbc`，尚未推送远端；整改版已在清空 AFS 并重新上传后，用新八卡按 README 原命令完成从零安装、冷编译、完整推理及保存，正式入口启动后无需人工修补或重启；连续换例仍待复验。本文只保留环境、可选设置及维护细节，合并原 ENVIRONMENT、PACKAGING、VERSIONS、BASELINE 和“复现与提交说明”。
+下载、上传、启动与取视频统一见 [README](README.md)。本次 `main` 发布版本为 `final1110`，包含 `4f1ebbc` 的计算整改；整改版已在清空 AFS 并重新上传后，用新八卡按 README 原命令完成从零安装、冷编译、完整推理及保存，正式入口启动后无需人工修补或重启；连续换例仍待复验。本文只保留环境、可选设置及维护细节，合并原 ENVIRONMENT、PACKAGING、VERSIONS、BASELINE 和“复现与提交说明”。
 
 ## 环境在哪里
 
@@ -92,6 +92,6 @@ H3 DiT使用InfiniLM/InfiniCore原生TP8，Attention沿用官方已有显式QK�
 | InfiniCore | `5a674e269717adc578c0d599846c9818e6d741fa` |
 | NineToothed 快照 | `6ce8568f8d208ba55afe4a5508bdc9896062b756` |
 
-这些是导入来源；整改代码本地提交为 `4f1ebbc`，当前完整版本应同时记录 `git rev-parse HEAD` 与 `git status --short`，存在未提交改动时不能只用HEAD代表运行源码。NineToothed 快照对应的官方上游 commit 未独立核验。
+这些是导入来源；整改计算代码提交为 `4f1ebbc`，`final1110` 相对冷复验源码 `af67f24` 只更新文档；当前完整版本应同时记录 `git rev-parse HEAD` 与 `git status --short`，存在未提交改动时不能只用HEAD代表运行源码。NineToothed 快照对应的官方上游 commit 未独立核验。
 
 日常算法自验入口为 [run_h3_development.sh](scripts/run_h3_development.sh)，与正式入口分开。历史运行证据保留于 `results/`，各次记录只代表当时版本，不作为当前操作指令。实现说明与操作流程见 README。
