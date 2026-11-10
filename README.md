@@ -1,8 +1,8 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-更新时间：2026-11-10T10:39:38+08:00（北京时间）。
+更新时间：2026-11-10T13:00:42+08:00（北京时间）。
 
-**版本状态：`final1110` 为本次 `main` 发布版本，包含 `4f1ebbc` 的算子整改和已完成的干净环境八卡复验说明。按下方命令获取 `main` 源码即可使用本次版本。**
+**版本状态：本次 main 文档提交为 final_modify，基于已完成干净环境八卡复验的 final1110 版本。按下方命令获取 main 源码即可复现。**
 
 统一首帧：`inputs/first_frame.png`；统一 FL2VA Prompt：**A dog falls asleep**。
 
@@ -10,7 +10,7 @@
 
 ### 1. 源码与依赖下载
 
-获取方式是下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。仓库为私有仓库，GitHub 账号需要读取权限；也可以登录网页后手动下载。
+获取方式是下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。
 
 本轮仍使用现有离线依赖，无需更换 ZIP 或增加 wheel。仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
 
@@ -71,7 +71,6 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ```bash
 # ==========================================================
 # 1. 本地 Git Bash：获取 main 源码和离线依赖
-# 仓库为私有仓库，需要当前 GitHub 账号有读取权限。
 # ==========================================================
 
 git clone --branch main --single-branch \
@@ -139,12 +138,11 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
 ### 1. 完成了什么
 
-- H3 DiT 使用 InfiniLM/InfiniCore 原生 TP8，Attention 计算沿用官方已有的显式 QKᵀ/scale/softmax/PV；RMSNorm、MRoPE 恢复官方实现，实验 ATen conv/groupnorm/Snake 后端排除在正式构建之外。
-- 音频 SnakeBeta 使用 NineToothed Python JIT，exp(alpha)、exp(beta)、sin 和归一化均在生成的九齿 kernel 内完成。native 条件编码保留数学 BF16 SDPA；条件编码、VAE 和调度继续使用原有 PyTorch/Diffusers 路径。
-- 本地69项流程回归、SnakeBeta三组FP32和MHA7头五种序列长度断言通过；MHA最大绝对误差为0，SnakeBeta最大绝对误差约5.25e-6。
-- 2026-11-10完成124帧、50步请求（49次DiT）、seed42的完整八卡FL2VA，推理及AFS保存均退出0。该次运行使用提交前的整改工作树，计算代码保存于提交 `4f1ebbc`；随后已用 `af67f24` 完成一次从零冷复验，`final1110` 相对该次冷复验只更新文档。
+1. **完成 MiniMax-H3 的原生八卡推理迁移。** 围绕比赛对完整模型推理的要求，将 DiT 主干接入 InfiniLM/InfiniCore 原生执行和八卡张量并行，串联条件编码、去噪、音视频解码与媒体输出，形成从统一图片和 Prompt 到完整音视频生成的端到端流程。条件编码、VAE 和调度保留原有 PyTorch/Diffusers 路径，模型主干通过原生算子与多卡通信执行，并已完成完整 FL2VA 用例验证。
 
-当前结论为“主要算子边界已整改、单个完整用例及干净环境一键复验跑通”；多用例连续验证和交付材料仍待收口，不宣称已完全通过赛事合规验收。底层官方CLI支持输入参数，正式封装仍固定Prompt、seed、步数与帧数，换例限制见[技术补充](REPRODUCE.md)。
+2. **形成清晰、可检查的算子实现边界。** Attention 使用官方已有的显式 QKᵀ、缩放、Softmax 和 PV 流程，RMSNorm、MRoPE 使用官方实现；音频 SnakeBeta 通过 NineToothed Python JIT 生成计算内核，将指数、正弦和归一化计算纳入九齿编译链。对应实现配套 SnakeBeta、Attention 和流程回归检查，验证关键计算的数值结果与调用接口，为赛事代码审查、结果核对及后续性能优化提供可追溯的依据。
+
+3. **交付可从源码启动的复现流程。** 将源码、固定依赖、构建工具、统一输入和参考资产整理为一套交付材料，使用现有离线依赖 ZIP，通过单条启动命令完成环境准备、-j120 编译、完整八卡推理和 AFS 结果保存。构建与推理信息实时输出，结果目录包含视频、参数、状态和日志；已完成干净环境下从源码准备到生成并保存音视频的完整复验，便于按同一流程复现、排查失败并核对产物。
 
 ### 2. 后续改进
 
