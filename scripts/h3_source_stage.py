@@ -68,6 +68,9 @@ def source_rows(root):
                 if entry.is_symlink():
                     raise RuntimeError("Unsafe source symlink: " + str(path))
                 if entry.is_dir(follow_symlinks=False):
+                    # Locked wheels go straight to work/downloads, not source/.
+                    if path == root / "third_party/offline-wheels":
+                        continue
                     if entry.name in IGNORED_DIRS or (current == base and entry.name == "build"):
                         continue
                     visit(base, path)
@@ -127,6 +130,8 @@ def node_directory(source, explicit=None):
                 parent = workspace.parent
                 if parent == Path(parent.anchor) or parent.is_relative_to(afs):
                     continue
+                # Hash the path string only to preserve stable node directory names.
+                # This never reads or verifies any file contents.
                 key = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:10]
                 return parent / ("h3-native-" + key)
     raise RuntimeError(
@@ -149,8 +154,8 @@ def stage(source, wheels, node=None):
     with contextlib.redirect_stdout(sys.stderr):
         verify_assets(source)
     locked = json.loads((source / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
-    wheels, zipped = wheel_input(wheels, locked)
-    print("H3_OFFLINE_WHEELS_COMPLETE", len(locked), "ZIP" if zipped else "directory",
+    wheels = wheel_input(wheels, locked)
+    print("H3_OFFLINE_WHEELS_COMPLETE", len(locked), "directory",
           file=sys.stderr, flush=True)
     rows = source_rows(source)
 

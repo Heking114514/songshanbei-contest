@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Node-side phases. Invoke the complete remote payload through Git Bash/base64.
+# Node-local preparation, build and validation phases.
 set -euo pipefail
 umask 007
 TOOLS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

@@ -17,6 +17,5 @@ __pycache__/
 
 /.h3-submission/
 
-# Release wheels are placed here after downloading.
-/offline-wheels/*
-!/offline-wheels/README.md
+# The former outer dependency ZIP is not part of source delivery.
+/h3-offline-wheels-linux-cp311.zip

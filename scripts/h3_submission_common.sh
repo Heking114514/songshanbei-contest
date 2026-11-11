@@ -7,7 +7,7 @@ case "$mode" in native|check) ;; *) exit 64;; esac
 TOOLS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export H3_SOURCE_ROOT="$(cd "$TOOLS/.." && pwd)"
 export H3_REPRO_WORK="$H3_NODE_ROOT/work"
-export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_DELIVERY_DIR/offline-wheels}"
+export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_DELIVERY_DIR/third_party/offline-wheels}"
 export BUILD_JOBS="${BUILD_JOBS:-120}"
 export FIRST_FRAME="${FIRST_FRAME:-$H3_SOURCE_ROOT/inputs/first_frame.png}"
 export H3_EXPECTED_GPUS=8 H3_FORBID_JIT_COMPILATION=0 H3_GPU_CHECK_MODE=inventory

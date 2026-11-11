@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
-from concurrent.futures import ThreadPoolExecutor
 import importlib.metadata
 import json
 import os
@@ -15,7 +13,6 @@ import subprocess
 import sys
 import tarfile
 import time
-import zipfile
 from urllib.request import urlopen
 
 from h3_source_identity import source_identity
@@ -217,8 +214,10 @@ def prepare(work):
     python = venv / "bin/python3"
     marker = work / "python/.h3-lock"
     if not marker.exists() or marker.read_text().strip() != key:
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            paths = list(pool.map(lambda row: fetch(row, downloads), lock["wheels"]))
+        # Runtime setup is fully offline; fetch() is a maintainer-only utility.
+        if not all(verified(downloads / row["filename"], row) for row in lock["wheels"]):
+            stage_wheels(work, os.environ.get("H3_WHEELHOUSE", REPO / "third_party/offline-wheels"))
+        paths = [downloads / row["filename"] for row in lock["wheels"]]
         # A validated install is promoted atomically, including its marker.
         # An interrupted staging install is retained for diagnosis and never reused.
         if (work / "python").exists():
@@ -376,47 +375,22 @@ def rebase_cache(work):
 
 
 
-WHEEL_ZIP = "h3-offline-wheels-linux-cp311.zip"
-
-
 def wheel_input(wheelhouse, rows):
-    """Validate an unpacked directory or the release ZIP without content hashes."""
+    """Validate individual locked wheel files without content hashes."""
     path = Path(wheelhouse).resolve()
+    if not path.is_dir():
+        raise RuntimeError("Offline wheels must be a directory of individual .whl files: "
+                           "use third_party/offline-wheels/ from the source checkout")
     for row in rows:
         if Path(row["filename"]).name != row["filename"]:
             raise RuntimeError("Unsafe wheel filename")
-    if not path.exists() and path.name == "offline-wheels":
-        path = path.parent / WHEEL_ZIP
-    if path.is_dir() and not any(path.glob("*.whl")) and (path.parent / WHEEL_ZIP).is_file():
-        path = path.parent / WHEEL_ZIP
-    if path.is_dir():
-        for row in rows:
-            if not verified(path / row["filename"], row):
-                raise RuntimeError("Missing/wrong-size offline wheel: " + row["filename"])
-        return path, False
-    if not path.is_file() or path.suffix.lower() != ".zip":
-        raise RuntimeError("Put " + WHEEL_ZIP + " beside run_submission.sh, "
-                           "or provide a complete offline-wheels directory")
-    expected = {"offline-wheels/" + row["filename"]: row for row in rows}
-    seen = set()
-    with zipfile.ZipFile(path) as bundle:
-        for member in bundle.infolist():
-            if member.is_dir() and member.filename == "offline-wheels/":
-                continue
-            if (member.filename not in expected or member.filename in seen
-                    or member.is_dir() or member.flag_bits & 1
-                    or (member.external_attr >> 16) & 0o170000 == 0o120000):
-                raise RuntimeError("Unexpected/unsafe wheel ZIP member: " + member.filename)
-            if member.file_size != expected[member.filename]["size"]:
-                raise RuntimeError("Wrong-size wheel ZIP member: " + member.filename)
-            seen.add(member.filename)
-    if seen != expected.keys():
-        raise RuntimeError("Wheel ZIP is missing locked files: " + ", ".join(sorted(expected.keys() - seen)))
-    return path, True
+        if not verified(path / row["filename"], row):
+            raise RuntimeError("Missing/wrong-size offline wheel: " + row["filename"])
+    return path
 
 
 def stage_wheels(work, wheelhouse, repo=None):
-    """Install ZIP members directly on node storage, retaining size-complete files."""
+    """Copy locked wheels to node storage, retaining size-complete files."""
     repo = REPO if repo is None else Path(repo)
     work = check_node_path(work, os.environ.get("IFAB_AFS_HOME"))
     rows = json.loads((repo / "requirements/h3_linux_cp311.lock.json").read_text())["wheels"]
@@ -424,24 +398,18 @@ def stage_wheels(work, wheelhouse, repo=None):
     if all(verified(dest / row["filename"], row) for row in rows):
         print("WHEEL_PRESTAGED_ALL", len(rows), flush=True)
         return
-    source, zipped = wheel_input(wheelhouse, rows)
+    source = wheel_input(wheelhouse, rows)
     dest.mkdir(parents=True, exist_ok=True)
-    with (zipfile.ZipFile(source) if zipped else contextlib.nullcontext()) as bundle:
-        for index, row in enumerate(rows, 1):
-            target = dest / row["filename"]
-            if not verified(target, row):
-                partial = target.with_suffix(target.suffix + ".offline-partial")
-                print("WHEEL_EXTRACT_BEGIN" if zipped else "WHEEL_COPY_BEGIN",
-                      index, len(rows), target.name, row["size"], flush=True)
-                if zipped:
-                    with bundle.open("offline-wheels/" + row["filename"]) as incoming, partial.open("wb") as out:
-                        shutil.copyfileobj(incoming, out, 1024 * 1024)
-                else:
-                    shutil.copy2(source / row["filename"], partial)
-                if not verified(partial, row):
-                    raise RuntimeError("Offline wheel copy size mismatch: " + row["filename"])
-                partial.replace(target)
-            print("WHEEL_OFFLINE_COMPLETE", index, len(rows), target.name, flush=True)
+    for index, row in enumerate(rows, 1):
+        target = dest / row["filename"]
+        if not verified(target, row):
+            partial = target.with_suffix(target.suffix + ".offline-partial")
+            print("WHEEL_COPY_BEGIN", index, len(rows), target.name, row["size"], flush=True)
+            shutil.copy2(source / row["filename"], partial)
+            if not verified(partial, row):
+                raise RuntimeError("Offline wheel copy size mismatch: " + row["filename"])
+            partial.replace(target)
+        print("WHEEL_OFFLINE_COMPLETE", index, len(rows), target.name, flush=True)
 
 
 def main():

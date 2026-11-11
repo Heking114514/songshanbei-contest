@@ -29,7 +29,7 @@ class SourceStageTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.afs = self.root / "afs"
         self.repo = self.afs / "songshanbei-contest"
-        self.wheels = self.repo / "offline-wheels"
+        self.wheels = self.repo / "third_party/offline-wheels"
         self.node = self.root / "node"
         for name in stage.REQUIRED:
             self.put(name, ("source:" + name).encode())
@@ -63,75 +63,45 @@ class SourceStageTests(unittest.TestCase):
         identity = source_identity(self.node / "source")
         self.assertEqual(identity["kind"], "source_directory_snapshot")
         self.assertIsNone(identity["git_head"])
-        self.assertFalse((self.node / "source/offline-wheels").exists())
+        self.assertFalse((self.node / "source/third_party/offline-wheels").exists())
         self.assertFalse((self.repo / ".h3-source.json").exists())
         self.assertEqual(json.loads((self.node / "source-stage.json").read_text())["state"], "ready")
 
     def make_wheel_zip(self):
         import zipfile
         archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
-        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+        with zipfile.ZipFile(archive, "w") as bundle:
             bundle.writestr("offline-wheels/a.whl", b"wheel")
         return archive
 
-    def test_zip_is_automatically_extracted_on_node_without_afs_expansion(self):
+    def test_explicit_zip_input_is_rejected_before_node_creation(self):
+        self.wheels = self.make_wheel_zip()
+        with self.assertRaisesRegex(RuntimeError, "directory of individual"):
+            self.run_stage()
+        self.assertFalse(self.node.exists())
+
+    def test_missing_directory_does_not_fall_back_to_legacy_zip(self):
         self.make_wheel_zip()
         shutil.rmtree(self.wheels)
+        with self.assertRaisesRegex(RuntimeError, "directory of individual"):
+            self.run_stage()
+        self.assertFalse(self.node.exists())
+
+    def test_missing_wheel_does_not_fall_back_to_legacy_zip(self):
+        self.make_wheel_zip()
+        (self.wheels / "a.whl").unlink()
+        with self.assertRaisesRegex(RuntimeError, "Missing/wrong-size"):
+            self.run_stage()
+        self.assertFalse(self.node.exists())
+
+    def test_wheels_are_copied_once_and_reused_on_retry(self):
         self.run_stage()
         installed = self.node / "work/downloads/a.whl"
         self.assertEqual(installed.read_bytes(), b"wheel")
-        self.assertFalse(self.wheels.exists())
+        self.assertFalse((self.node / "source/third_party/offline-wheels").exists())
         before = installed.stat().st_mtime_ns
-        with patch.object(stage, "stage_wheels", wraps=stage.stage_wheels):
-            self.run_stage()
-        self.assertEqual(installed.stat().st_mtime_ns, before)
-
-    def test_zip_works_with_readme_only_wheel_directory_from_checkout(self):
-        self.make_wheel_zip()
-        (self.wheels / "a.whl").unlink()
-        (self.wheels / "README.md").write_text("Source checkout placeholder")
         self.run_stage()
-        self.assertEqual((self.node / "work/downloads/a.whl").read_bytes(), b"wheel")
-        self.assertFalse((self.wheels / "a.whl").exists())
-
-    def test_zip_root_entry_forwards_extracted_wheels_to_worker(self):
-        self.install_launcher()
-        self.make_wheel_zip()
-        shutil.rmtree(self.wheels)
-        result = self.launch(self.repo, extra=dict(H3_NODE_ROOT=self.node.as_posix()))
-        data = self.worker_env(result)
-        self.assertEqual(Path(data["wheels"]), self.node / "work/downloads")
-        self.assertFalse(self.wheels.exists())
-
-    def test_zip_missing_or_unsafe_members_fail_before_node_creation(self):
-        import zipfile
-        archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
-        shutil.rmtree(self.wheels)
-        for entries in ({}, {"offline-wheels/a.whl": b"shorter"},
-                        {"offline-wheels/a.whl": b"wheel", "../escape": b"bad"}):
-            with self.subTest(entries=entries):
-                with zipfile.ZipFile(archive, "w") as bundle:
-                    for name, value in entries.items():
-                        bundle.writestr(name, value)
-                with self.assertRaises(RuntimeError):
-                    self.run_stage()
-                self.assertFalse(self.node.exists())
-
-    def test_zip_crc_failure_leaves_no_promoted_wheel(self):
-        import zipfile
-        archive = self.repo / "h3-offline-wheels-linux-cp311.zip"
-        with zipfile.ZipFile(archive, "w", zipfile.ZIP_STORED) as bundle:
-            bundle.writestr("offline-wheels/a.whl", b"wheel")
-        with zipfile.ZipFile(archive) as bundle:
-            member = bundle.infolist()[0]
-            offset = member.header_offset + 30 + len(member.filename.encode()) + len(member.extra)
-        blob = bytearray(archive.read_bytes())
-        blob[offset] ^= 1
-        archive.write_bytes(blob)
-        shutil.rmtree(self.wheels)
-        with self.assertRaises(zipfile.BadZipFile):
-            self.run_stage()
-        self.assertFalse((self.node / "work/downloads/a.whl").exists())
+        self.assertEqual(installed.stat().st_mtime_ns, before)
 
     def test_legacy_stage_receipt_preserves_unchanged_objects_and_sources(self):
         self.run_stage()

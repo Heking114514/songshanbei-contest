@@ -10,30 +10,24 @@
   "files": [
     {
       "path": "third_party/h3/flagtree-0.7.0+hcu3.6-cp311-cp311-linux_x86_64.whl",
-      "size": 72231003,
-      "sha256": "c7e67f30152702395455ccc440949fecfce5ed4c63a04ede23dfe1802061b714"
+      "size": 72231003
     },
     {
       "path": "third_party/h3/hcu-jit-clang18-minimal.tar.gz",
-      "size": 74463838,
-      "sha256": "a02d84692478a15b141266c321827a31581eff57273866ea652eecf2214054e2"
+      "size": 74463838
     },
     {
       "path": "third_party/h3/xmake-v3.0.3.gz.run",
-      "size": 3030123,
-      "sha256": "50842cf3a77436bc97fccc7c74935a0ed002bc44afa69cf05fb2b5b8463279d9"
+      "size": 3030123
     },
     {
       "path": "third_party/h3/xmake-bundle-v3.0.3.linux.x86_64",
-      "size": 2761352,
-      "sha256": "cf4def6e60db1b35d1af4c0064abb069b4b89d90aea3d57b551ef4c697141190"
+      "size": 2761352
     }
   ],
   "flagtree": {
     "commit": "47970467c4d75a9cfffb84426383c7e7a9f2557a",
     "source_url": "https://codeload.github.com/flagos-ai/FlagTree/tar.gz/47970467c4d75a9cfffb84426383c7e7a9f2557a",
-    "source_sha256": "31cd442562f0278f4f0f9cd02df3efd2d9c045516e263fc1fcf01bd738aeba48",
-    "archive_sha256": "b5e4fb139947e5aa182338c25704bcdc4844561ba355fc15ff0f03bbb3157a76",
     "excluded": [
       ".git",
       ".github",
@@ -53,11 +47,7 @@
   "jit_toolchain": {
     "source_repository": "harbor.baai.ac.cn/flagtree/flagtree-hcu-py310-torch2.10.0-dtk26.04-ubuntu22.04",
     "source_layer": "sha256:630032d42d85494e5c3ea8fc6173fb4ec207d8550d0c456d999b9a584c8f3600",
-    "binaries": {
-      "clang-18": "be99756419949da6fecb431bbd0309b29e5efacf55120f997074ef48766e7b43",
-      "lld": "f2591ae2ae45bfe8d10c3c1cac1340e24ca5776dd131ec67f841a0d0787e78f3"
-    },
-    "note": "Archive differs from historical AFS ready archive; both compiler binaries match. Fresh JIT required for this reproduction.",
+    "note": "Bundled clang-18 and lld for the HCU JIT backend.",
     "binary_sizes": {
       "clang-18": 158257584,
       "lld": 89999744

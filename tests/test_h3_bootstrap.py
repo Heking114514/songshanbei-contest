@@ -145,7 +145,11 @@ class BootstrapTests(unittest.TestCase):
                 info.size = len(data)
                 bundle.addfile(info, io.BytesIO(data))
         lock = repo / "requirements/h3_linux_cp311.lock.json"
-        lock.write_text(json.dumps(dict(wheels=[])))
+        bundled = repo / "third_party/offline-wheels"
+        bundled.mkdir()
+        (bundled / "sample.whl").write_bytes(b"wheel")
+        lock.write_text(json.dumps(dict(wheels=[dict(name="sample", version="1.0",
+            filename="sample.whl", size=5, url="https://example.invalid/sample.whl")])))
         assets = tool / "manifest.json"
         manifest = dict(files=[dict(path="third_party/h3/flagtree.whl", size=5)],
                         jit_toolchain=dict(binary_sizes={"clang-18": 8, "lld": 6}))
@@ -165,11 +169,15 @@ class BootstrapTests(unittest.TestCase):
                 patch.object(bootstrap, "verify_assets", return_value=manifest), \
                 patch.object(bootstrap, "prepare_xmake", return_value=("xmake v3.0.3", "official_bundle")), \
                 patch.object(bootstrap, "verify_packages"), patch.object(bootstrap, "run", side_effect=install), \
+                patch.object(bootstrap, "urlopen", side_effect=AssertionError("Network used")), \
                 patch.object(hashlib, "sha256", side_effect=AssertionError("SHA256 called")), \
-                patch.dict(os.environ, {"IFAB_AFS_HOME": str(self.root / "afs")}):
+                patch.dict(os.environ, {"IFAB_AFS_HOME": str(self.root / "afs"),
+                                       "H3_WHEELHOUSE": str(bundled)}):
             bootstrap.prepare(work)
+            self.assertEqual((work / "downloads/sample.whl").read_bytes(), b"wheel")
             self.assertTrue((work / "python/.h3-lock").is_file())
             self.assertNotIn("--hash=", (work / "local-wheels.lock.txt").read_text())
+            self.assertNotIn("https://", (work / "local-wheels.lock.txt").read_text())
             self.assertFalse(any("--require-hashes" in argv for argv in calls))
             receipt = json.loads((work / "prepared.json").read_text())
             receipt["key"] = "old-sha-key"

@@ -1,0 +1,19 @@
+{
+  "bytes": 1553927,
+  "width": 768,
+  "height": 928,
+  "fps": "24",
+  "frames": 124,
+  "audio_streams": 1,
+  "audio": {
+    "codec": "aac",
+    "channels": 2,
+    "sample_rate": 32000,
+    "decoded_samples_per_channel": 165888,
+    "decoded_sample_rates": [
+      32000
+    ],
+    "finite": true,
+    "absolute_peak": 0.48746979236602783
+  }
+}

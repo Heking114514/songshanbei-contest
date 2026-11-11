@@ -1,0 +1,14 @@
+{
+  "task": "fl2va",
+  "returncode": 0,
+  "size_pass": true,
+  "length_pass": true,
+  "average_ssim_percent": 95.826,
+  "native_video": "results/fl2va/result.mp4",
+  "reference_video": "reference/reference_fl2va.mp4",
+  "comparator": "InfiniLM/examples/minimax_h3_compare.py",
+  "comparator_modified": false,
+  "generated_native": false,
+  "generated_reference": false,
+  "report_log": "results/fl2va/official-comparison.log"
+}

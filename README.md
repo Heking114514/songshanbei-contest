@@ -1,34 +1,40 @@
 # MiniMax-H3 八卡阶段提交工作区
 
-更新时间：2026-11-10T13:00:42+08:00（北京时间）。
-
-**版本状态：本次 main 文档提交为 final_modify，基于已完成干净环境八卡复验的 final1110 版本。按下方命令获取 main 源码即可复现。**
-
 统一首帧：`inputs/first_frame.png`；统一 FL2VA Prompt：**A dog falls asleep**。
 
 ## 一、操作流程
 
 ### 1. 源码与依赖下载
 
-获取方式是下载本仓库 **main 分支源码**，再从 [离线依赖 ZIP](https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip) 下载 **`h3-offline-wheels-linux-cp311.zip`**。
+下载 **main 分支**的完整仓库。Python 离线依赖位于 `third_party/offline-wheels/`，共 55 个独立 `.whl` 文件；构建工具位于 `third_party/h3/`。
 
-本轮仍使用现有离线依赖，无需更换 ZIP 或增加 wheel。仓库包含源码、构建工具、首帧图片和参考视频；ZIP 包含 55 个 Python 依赖。**源码要展开，依赖 ZIP 保留原名，不要解压。** 完整命令见下方“5. 总结”。
+涉及修改的第三方项目及对应源码、补丁位置如下：
+
+| 项目 | 上游仓库 | 本仓库中的修改位置（main 分支） |
+|---|---|---|
+| InfiniCore | [InfiniTensor/InfiniCore](https://github.com/InfiniTensor/InfiniCore) | [InfiniCore/](https://github.com/Heking114514/songshanbei-contest/tree/main/InfiniCore) |
+| InfiniLM | [InfiniTensor/InfiniLM](https://github.com/InfiniTensor/InfiniLM) | [InfiniLM/](https://github.com/Heking114514/songshanbei-contest/tree/main/InfiniLM) |
+| 九齿 NineToothed | [InfiniTensor/ninetoothed](https://github.com/InfiniTensor/ninetoothed) | [ninetoothed/](https://github.com/Heking114514/songshanbei-contest/tree/main/ninetoothed) |
+| FlagTree（构建配置补丁） | [flagos-ai/FlagTree](https://github.com/flagos-ai/FlagTree) | [patch_flagtree_build.py](https://github.com/Heking114514/songshanbei-contest/blob/main/third_party/h3/patch_flagtree_build.py) |
+
+InfiniCore、InfiniLM 和 NineToothed 的源码整合在本仓库中，分支为 `main`。
 
 ### 2. 文件上传
 
-将整个 `songshanbei-contest/` 文件夹上传到**个人 AFS 根目录**，保留所有仓库文件。ZIP 与 `run_submission.sh` 必须同级：
+将完整的 `songshanbei-contest/` 文件夹上传到**个人 AFS 根目录**，保持以下目录结构：
 
 ```text
 个人AFS/
 └── songshanbei-contest/
     ├── run_submission.sh
-    ├── h3-offline-wheels-linux-cp311.zip
     ├── InfiniCore/
     ├── InfiniLM/
     ├── ninetoothed/
     ├── scripts/
     ├── requirements/
     ├── third_party/
+    │   ├── offline-wheels/      # 55 个独立 .whl 文件
+    │   └── h3/                  # HCU 编译后端与构建工具
     ├── inputs/first_frame.png
     └── reference/
 ```
@@ -41,9 +47,11 @@
 bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 ```
 
-脚本依次执行源码暂存、依赖解压与安装、工具链准备、`-j120` 编译、完整八卡推理和结果保存，进度实时打印。本次整改版已在清空个人 AFS、重新上传源码和原始 ZIP 后，用新八卡按本页原命令完成从零安装、冷编译、完整推理及 AFS 保存；正式入口启动后无需人工修补或重启。
+运行环境需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936，以及共享模型 `/public/home/aclsylqidf/shared/MiniMax-H3`。Python 依赖和构建工具由脚本自动准备，无需手工安装或激活环境。
 
-平台需提供 Python 3.11、Torch 2.9.0/HIP 6.3、DTK/gfx936 和共享模型 `/public/home/aclsylqidf/shared/MiniMax-H3`。默认使用完整模型、seed42、50步请求、124帧；**不加 check，官方比较在视频下载后于本地进行。**
+脚本自动将源码与依赖暂存到节点盘，完成离线安装、工具链准备、`-j120` 编译、完整八卡推理、视频检查和 AFS 保存，进度实时打印。启动前检查文件与依赖完整性，运行时不联网补包。
+
+默认参数为完整模型、8 卡、seed42、50 步请求、124 帧。上述命令不加 `check`，生成视频后即可从 AFS 获取结果；官方比较在视频下载后于本地进行。
 
 ### 4. 产物获取
 
@@ -66,7 +74,7 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
 ### 5. 总结
 
-以下为本次 `main` 版本的获取与运行流程。源码展开后保留完整目录结构，原始依赖 ZIP 放在仓库根目录。
+完整复现命令及结果获取方式如下：
 
 ```bash
 # ==========================================================
@@ -76,23 +84,17 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 git clone --branch main --single-branch \
   https://github.com/Heking114514/songshanbei-contest.git
 
-cd songshanbei-contest
-
-# 也可以从 Release 页面手动下载此文件。
-curl -fL --retry 3 -C - \
-  -o h3-offline-wheels-linux-cp311.zip \
-  "https://github.com/Heking114514/songshanbei-contest/releases/download/offline-wheel/h3-offline-wheels-linux-cp311.zip"
-
 # 将整个 songshanbei-contest 文件夹上传到个人 AFS 根目录。
-# 源码保持展开状态，依赖 ZIP 保持原名，不要解压。
+# 保留全部源码和 third_party/ 下的独立依赖文件，无需另下压缩包。
 #
 # 上传后应当是：
 # 个人AFS/songshanbei-contest/run_submission.sh
-# 个人AFS/songshanbei-contest/h3-offline-wheels-linux-cp311.zip
 # 个人AFS/songshanbei-contest/InfiniCore/
 # 个人AFS/songshanbei-contest/InfiniLM/
+# 个人AFS/songshanbei-contest/ninetoothed/
 # 个人AFS/songshanbei-contest/scripts/
-# 个人AFS/songshanbei-contest/third_party/
+# 个人AFS/songshanbei-contest/third_party/offline-wheels/  # 55 个 .whl
+# 个人AFS/songshanbei-contest/third_party/h3/
 # 个人AFS/songshanbei-contest/inputs/first_frame.png
 # 个人AFS/songshanbei-contest/reference/
 # 其余仓库文件也完整保留。
@@ -105,7 +107,7 @@ curl -fL --retry 3 -C - \
 bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
 # 脚本自动完成：
-# 源码暂存到节点盘 → ZIP解压 → Python环境安装
+# 源码暂存到节点盘 → 复制独立wheel → Python环境安装
 # → 工具链准备 → -j120编译 → 完整八卡推理
 # → 检查视频 → 保存视频和日志到AFS
 #
@@ -138,16 +140,16 @@ bash "${IFAB_AFS_HOME:-$HOME}/songshanbei-contest/run_submission.sh"
 
 ### 1. 完成了什么
 
-1. **完成 MiniMax-H3 的原生八卡推理迁移。** 围绕比赛对完整模型推理的要求，将 DiT 主干接入 InfiniLM/InfiniCore 原生执行和八卡张量并行，串联条件编码、去噪、音视频解码与媒体输出，形成从统一图片和 Prompt 到完整音视频生成的端到端流程。条件编码、VAE 和调度保留原有 PyTorch/Diffusers 路径，模型主干通过原生算子与多卡通信执行，并已完成完整 FL2VA 用例验证。
+1. **完整 FL2VA 八卡推理。** DiT 主干通过 InfiniLM/InfiniCore 原生算子与八卡张量并行执行，条件编码、VAE 和调度保留 PyTorch/Diffusers 路径，完成从首帧图片和 Prompt 到音视频输出的完整流程。
 
-2. **形成清晰、可检查的算子实现边界。** Attention 使用官方已有的显式 QKᵀ、缩放、Softmax 和 PV 流程，RMSNorm、MRoPE 使用官方实现；音频 SnakeBeta 通过 NineToothed Python JIT 生成计算内核，将指数、正弦和归一化计算纳入九齿编译链。对应实现配套 SnakeBeta、Attention 和流程回归检查，验证关键计算的数值结果与调用接口，为赛事代码审查、结果核对及后续性能优化提供可追溯的依据。
+2. **算子与编译路径。** Attention 使用显式 QKᵀ、缩放、Softmax 和 PV 流程，RMSNorm、MRoPE 使用官方实现；音频 SnakeBeta 通过 NineToothed Python JIT 生成计算内核，包含指数、正弦与归一化计算。
 
-3. **交付可从源码启动的复现流程。** 将源码、固定依赖、构建工具、统一输入和参考资产整理为一套交付材料，使用现有离线依赖 ZIP，通过单条启动命令完成环境准备、-j120 编译、完整八卡推理和 AFS 结果保存。构建与推理信息实时输出，结果目录包含视频、参数、状态和日志；已完成干净环境下从源码准备到生成并保存音视频的完整复验，便于按同一流程复现、排查失败并核对产物。
+3. **从零复现验证。** 已在空 AFS、新八卡环境完成一次无人工干预的环境准备、冷编译、完整推理和结果保存，入口总耗时约 37 分 03 秒。视频为 124 帧、768×928、24fps，含音频；本地使用未修改的官方比较器，对随附历史参考视频得到 Size/Length PASS、Average SSIM 95.826%。比较输出见 [official-comparison.log](results/fl2va/official-comparison.log)，对应视频见 [result.mp4](results/fl2va/result.mp4)。
 
 ### 2. 后续改进
 
-- **数值一致性**：对照条件编码、注意力、音视频潜变量和解码输出，定位两端差异及不同运行间的 SSIM 波动，补充音频波形与听感检查。
-- **算子性能**：针对显式 Attention、基础矩阵乘和通信开展同输入、同环境对照，数值验证通过后再更新性能结论。
-- **交付与复现**：贯通正式封装的换例参数及记录/自检，补充不同图片和Prompt的连续完整验证；修复头文件mtime与重复prepare/build引起的LM重编，验证跨节点缓存恢复。
+- **数值一致性**：对照条件编码、注意力、音视频潜变量和解码输出，定位输出差异及 SSIM 波动，补充音频波形与听感检查。
+- **算子性能**：优化显式 Attention、矩阵乘和多卡通信，在相同输入与环境下验证数值和端到端性能。
+- **复现效率**：统一换图与 Prompt 参数、运行记录和媒体检查，补充多用例验证；减少头文件时间戳变化及重复准备引起的重编译，验证跨节点缓存恢复。
 
 环境目录、换图、可选 check 及依赖维护统一见 [技术补充](REPRODUCE.md)。

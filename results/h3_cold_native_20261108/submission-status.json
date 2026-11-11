@@ -1,8 +1,0 @@
-{
-  "state": "complete",
-  "pipeline_rc": 0,
-  "at": "2026-11-08T22:10:21+08:00",
-  "mode": "native",
-  "afs_destination": "/public/home/aclsylqidf/infinifabric-users/users/2cc72669b8cc4814b904dca9ba192cbd/h3-results/cold-native-20261108",
-  "note": "AFS persistence is confirmed separately by saved-manifest.json"
-}

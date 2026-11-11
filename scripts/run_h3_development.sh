@@ -30,6 +30,7 @@ if [ "$phase" = eight-smoke ] && [ "$gpus" != 8 ]; then
     printf 'Set H3_DEV_GPUS=8 for eight-smoke.\n' >&2; exit 64
 fi
 export H3_SOURCE_ROOT="$(cd "$TOOLS/.." && pwd)"
+export H3_WHEELHOUSE="${H3_WHEELHOUSE:-$H3_SOURCE_ROOT/third_party/offline-wheels}"
 export H3_REPRO_WORK="${H3_REPRO_WORK:-$H3_SOURCE_ROOT/.h3-development}"
 export H3_BASE_PYTHON="${H3_BASE_PYTHON:-/usr/local/bin/python3}"
 export BUILD_JOBS="${BUILD_JOBS:-120}"

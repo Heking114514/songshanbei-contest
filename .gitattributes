@@ -9,6 +9,7 @@
 /requirements/*.txt text eol=lf
 /third_party/h3/*.py text eol=lf
 /third_party/h3/*.whl binary
+/third_party/offline-wheels/*.whl binary
 /third_party/h3/*.tar.gz binary
 /third_party/h3/*.run binary
 /inputs/*.png binary

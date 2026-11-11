@@ -1,7 +1,0 @@
-srun: job 1012748 queued and waiting for resources
-srun: job 1012748 has been allocated resources
-WARNING: Logging before InitGoogleLogging() is written to STDERR
-W1101 21:20:30.324570 2817688 sdp_utils_cpp.h:573] Warning: Aotriton flash attention has been compile-time disabled. (function operator())
-MHA seq=1024 dense=1.1524ms sdpa=0.3102ms speedup=3.715x cos=0.99998069 max_abs=6.836e-03
-MHA seq=4096 dense=21.8330ms sdpa=2.7906ms speedup=7.824x cos=0.99997991 max_abs=3.906e-03
-[write] results/mha_baseline_compare.json

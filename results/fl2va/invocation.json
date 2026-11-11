@@ -1,0 +1,29 @@
+{
+  "task": "fl2va",
+  "first_frame": "inputs/first_frame.png",
+  "prompt": "A dog falls asleep",
+  "seed": 42,
+  "requested_steps": 50,
+  "num_frames": 124,
+  "gpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "full_model": true,
+  "native_video": "results/fl2va/result.mp4",
+  "native_bytes": 1553927,
+  "reference_video": "reference/reference_fl2va.mp4",
+  "reference_bytes": 1554000,
+  "reference_case": "reference/case.json",
+  "comparison_program_modified": false,
+  "comparison_log_scope": "Verbatim final report emitted by the official comparator",
+  "native_origin": "Fresh full TP8 generation by run_submission.sh",
+  "comparison_generated_native": false,
+  "comparison_generated_reference": false
+}
